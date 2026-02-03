@@ -1,0 +1,108 @@
+{
+  "document": {
+    "document-id": "patchboard-atlas.spec",
+    "version": "0.1",
+    "type": "master-spec",
+    "purpose": "Defines the Patchboard Atlas tool, its scope, and the specification documents that compose it.",
+    "status": "draft",
+    "depends_on": [
+      "tkintertester.spec.v0.1",
+      "lionscliapp.initial-spec.v0_3",
+      "patchboard.spec.messages.file-transport.v1",
+      "patchboard.spec.messages.core.v1"
+    ]
+  },
+  "content": {
+    "overview": {
+      "summary": "Patchboard Atlas is a graphical configuration and observation tool for FileTalk Patchboard Routers.",
+      "non_goals": [
+        "Direct mutation of router state",
+        "Message transport semantics",
+        "Component execution"
+      ]
+    },
+    "project": {
+      "name": "patchboard-atlas",
+      "version": "0.1",
+      "kind": "graphical-tool",
+      "domain": "filetalk",
+      "role": "patchboard-visual-configurator",
+      "description": "A graphical editor and observer for FileTalk Patchboard Routers."
+    },
+    "design_principles": [
+      "Observer-first architecture",
+      "Router is authoritative",
+      "All mutation occurs via FileTalk messages",
+      "Canvas renders from a pure data model"
+    ],
+    "component-id-card-schema": {
+      "schema_version": "1",
+      "required_fields": [
+        "component_type",
+        "title",
+        "channels"
+      ],
+      "channels_shape": {
+        "in": "array[string]",
+        "out": "array[string]"
+      }
+    },
+    "built-in-components": {
+      "schema_version": "1",
+      "components": [
+        {
+          "component_type": "patchboard.router",
+          "title": "Patchboard Router",
+          "channels": {
+            "in": [
+              "link",
+              "unlink",
+              "quit"
+            ],
+            "out": [
+              "notice",
+              "startup",
+              "shutdown"
+            ]
+          }
+        }
+      ]
+    },
+    "atlas-world-model-schema": {
+      "schema_version": "1",
+      "entities": {
+        "component_instance": {
+          "fields": [
+            "instance_id",
+            "component_type",
+            "position"
+          ]
+        },
+        "wire": {
+          "fields": [
+            "from",
+            "to",
+            "status"
+          ]
+        }
+      }
+    },
+    "interaction-rules": {
+      "actions": [
+        "add_component",
+        "delete_component",
+        "move_component",
+        "begin_wire",
+        "complete_wire",
+        "cancel_wire"
+      ]
+    },
+    "test-expectations": {
+      "invariants": [
+        "component_instances_have_unique_ids",
+        "wires_connect_existing_ports",
+        "no_gui_action_mutates_router_state_directly"
+      ]
+    }
+  }
+}
