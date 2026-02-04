@@ -3,22 +3,32 @@
     "document-id": "patchboard-atlas.spec",
     "version": "0.1",
     "type": "master-spec",
-    "purpose": "Defines the Patchboard Atlas tool, its scope, and the specification documents that compose it.",
+    "purpose": "Defines the Patchboard Atlas tool: its intent, scope, design principles, internal data models, and interaction grammar. This document is the authoritative root specification for the Patchboard Atlas project.",
     "status": "draft",
     "depends_on": [
       "tkintertester.spec.v0.1",
       "lionscliapp.initial-spec.v0_3",
-      "patchboard.spec.messages.file-transport.v1",
-      "patchboard.spec.messages.core.v1"
-    ]
+      "patchboard.spec.messages.core.v1",
+      "patchboard.spec.messages.file-transport.v1"
+    ],
+    "notes": "This specification intentionally separates project definition from runtime state and operational data. Patchboard Atlas observes and influences Patchboard Routers exclusively via FileTalk message exchange and published state artifacts."
+  },
+  "links": {
+    "github": "https://github.com/LionKimbro/patchboard-atlas",
+    "conversations": {
+      "first-conversation": "https://chatgpt.com/g/g-p-6965e8dcf0388191b49d2611e683eef8-filetalk-epoch-5-core-spec/c/69817e93-df78-8331-846e-2d95e7dfab7f"
+    }
   },
   "content": {
     "overview": {
-      "summary": "Patchboard Atlas is a graphical configuration and observation tool for FileTalk Patchboard Routers.",
+      "summary": "Patchboard Atlas is a graphical configuration and observation tool for FileTalk Patchboard Routers. It provides a canvas-based interface for placing components, wiring connections, and visualizing routing topology, while treating the Patchboard Router as the sole authoritative source of routing state.",
       "non_goals": [
-        "Direct mutation of router state",
-        "Message transport semantics",
-        "Component execution"
+        "Direct mutation of router internal state",
+        "Defining message transport semantics",
+        "Providing delivery guarantees or acknowledgements beyond those defined by Patchboard Router"
+      ],
+      "future-goals-but-not-now": [
+        "Executing or hosting FileTalk components"
       ]
     },
     "project": {
@@ -27,28 +37,54 @@
       "kind": "graphical-tool",
       "domain": "filetalk",
       "role": "patchboard-visual-configurator",
-      "description": "A graphical editor and observer for FileTalk Patchboard Routers."
+      "description": "A graphical editor and observer for FileTalk Patchboard Routers, implemented in Python using Tkinter and Canvas."
     },
     "design_principles": [
-      "Observer-first architecture",
-      "Router is authoritative",
-      "All mutation occurs via FileTalk messages",
-      "Canvas renders from a pure data model"
+      "Observer-first architecture: the router is always authoritative",
+      "All routing mutations are requested indirectly via FileTalk messages",
+      "Patchboard Atlas never assumes immediate success of user actions",
+      "Canvas rendering is driven exclusively by a pure data model",
+      "Eventual convergence is preferred over synchronous confirmation",
+      "Underspecified interaction is acceptable; architectural clarity is not"
     ],
+    "architectural-role": {
+      "atlas": {
+        "role": "observer-and-requestor",
+        "responsibilities": [
+          "Render a visual model of components and routes",
+          "Emit link and unlink requests via FileTalk messages",
+          "Observe router change notices and re-read published state",
+          "Reconcile visual intent with authoritative router state"
+        ],
+        "explicit_non_responsibilities": [
+          "Maintaining authoritative routing tables",
+          "Guaranteeing delivery or ordering semantics",
+          "Performing component execution or scheduling"
+        ]
+      },
+      "router": {
+        "role": "authoritative-routing-engine",
+        "relationship": "Patchboard Atlas treats all router-published state as authoritative and opaque."
+      }
+    },
     "component-id-card-schema": {
       "schema_version": "1",
-      "required_fields": [
-        "component_type",
-        "title",
-        "channels"
-      ],
+      "purpose": "Defines the declarative structure used to describe a single components known to Patchboard Atlas.",
+      "required_fields": {
+        "title": "(str) title for the component",
+        "channels": "(see below) the in and out channels on this component",
+        "inbox": "(str) the full absolute path to the inbox folder for the component",
+        "outbox": "(str) the full absolute path to the outbox folder for the component"
+      },
       "channels_shape": {
-        "in": "array[string]",
-        "out": "array[string]"
-      }
+        "in": "(array[string]) the channels leading into the component",
+        "out": "(array[string]) the channels extending out from the component"
+      },
+      "notes": "Component ID Cards describe connectable affordances only. They do not encode filesystem paths, runtime configuration, or execution semantics."
     },
     "built-in-components": {
       "schema_version": "1",
+      "purpose": "Defines component types built into Patchboard Atlas for initial operation and testing.",
       "components": [
         {
           "component_type": "patchboard.router",
@@ -70,24 +106,28 @@
     },
     "atlas-world-model-schema": {
       "schema_version": "1",
+      "purpose": "Defines the internal world model rendered by the Atlas canvas and manipulated by user interaction.",
       "entities": {
         "component_instance": {
           "fields": [
             "instance_id",
             "component_type",
             "position"
-          ]
+          ],
+          "notes": "Component instances represent visual placements, not authoritative runtime entities."
         },
         "wire": {
           "fields": [
             "from",
             "to",
             "status"
-          ]
+          ],
+          "notes": "Wire status may include transient or pending states reflecting reconciliation with router state."
         }
       }
     },
     "interaction-rules": {
+      "purpose": "Defines the abstract interaction grammar supported by Patchboard Atlas. These actions describe user intent, not specific gestures or input devices.",
       "actions": [
         "add_component",
         "delete_component",
@@ -95,13 +135,44 @@
         "begin_wire",
         "complete_wire",
         "cancel_wire"
+      ],
+      "notes": "Gesture mapping (mouse buttons, drag semantics, keyboard shortcuts) is explicitly out of scope for this specification."
+    },
+    "reconciliation-model": {
+      "purpose": "Describes how Patchboard Atlas reconciles user intent with authoritative router state.",
+      "principles": [
+        "User actions emit requests, not state changes",
+        "Router emits coarse-grained change notices",
+        "Atlas responds by re-reading published router state",
+        "Visual state converges toward authoritative truth"
+      ],
+      "notes": "Temporary visual divergence (e.g., pending wires) is considered a feature, not a failure."
+    },
+    "testing-strategy": {
+      "purpose": "Defines the testing posture for Patchboard Atlas.",
+      "layers": [
+        {
+          "name": "pure-logic-tests",
+          "description": "Non-GUI tests validating data models, reconciliation logic, and invariants."
+        },
+        {
+          "name": "event-loop-tests",
+          "description": "Tkinter-based automated tests executed inside a real Tk mainloop using tkintertester."
+        }
       ]
     },
     "test-expectations": {
       "invariants": [
         "component_instances_have_unique_ids",
         "wires_connect_existing_ports",
-        "no_gui_action_mutates_router_state_directly"
+        "no_gui_action_mutates_router_state_directly",
+        "visual_state_can_be_reconstructed_from_model"
+      ]
+    },
+    "development-process": {
+      "initial-goals": [
+        "establish 2-part testing basis (guitest, test)",
+        "salvage marginalia-atlas"
       ]
     }
   }

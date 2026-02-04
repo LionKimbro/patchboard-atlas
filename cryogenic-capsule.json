@@ -1,0 +1,286 @@
+{
+  "document": {
+    "document_id": "patchboard-router.cryogenic-capsule.2026-02-03",
+    "title": "Patchboard Router Cryogenic Capsule (2026-02-03)",
+    "purpose": "holding file whose only job is to preserve context for Patchboard Atlas",
+    "date": "2026-02-03",
+    "cryogenic-capsule-origin-conversation": {
+      "date": "2026-02-03",
+      "explanation": "Wing-Cat suggested this in a conversation, when Wing-Cat was helping me navigate some pressures",
+      "wing-cat": "https://chatgpt.com/c/6982819b-db9c-832d-82b0-e800447fb5ee"
+    }
+  },
+  "salvage-thread": {
+    "text": "We can reuse significant pieces of Marginalia Atlas (UI patterns, canvas projection logic, model<->view reconciliation) for Patchboard Atlas.\nThis is a slavage operation that reduces risk and preserves continuity.",
+    "conversations-with-Wing-Cat": {
+      "main-conversation-about-patchboard-atlas": "https://chatgpt.com/c/69817e93-df78-8331-846e-2d95e7dfab7f",
+      "salvaging-marginalia-atlas-material": "https://chatgpt.com/c/69817e93-df78-8331-846e-2d95e7dfab7f",
+      "declarative-model-and-quasi-idempotency": {
+        "source-conversation": "https://chatgpt.com/c/6981fd07-2c54-8325-8d3b-5df3bddec2f8",
+        "images-upload-conversation": "https://chatgpt.com/c/6982f2df-77e4-832c-8964-c8febceb9330",
+        "detailed-conversation-on-implementation-in-python-tkinter": "https://chatgpt.com/c/69820134-fc3c-8329-84f3-ba679097e6c8",
+        "key-words": [
+          "quasi-idempotency",
+          "idempotent in intent",
+          "reconciliation",
+          "tagged projection reconciliation",
+          "ephemeral correspondence space",
+          "reconstructive mapping per projection",
+          "component identity",
+          "topology",
+          "spatial declaration",
+          "semantic truth",
+          "logical truth",
+          "spatial truth"
+        ]
+      },
+      "gui-testing-thread": "https://chatgpt.com/c/6982710b-fb04-8325-845d-0d63d7a7b072"
+    },
+    "tools-of-note": {
+      "python-modules": {
+        "lionscliapp": "CLI runner, coordinates keeper",
+        "tkintertester": "test python tkinter programs"
+      },
+      "agents": {
+        "claude-code": "deep detailed programming",
+        "codex": "lighter, fast work and programming"
+      }
+    },
+    "filepaths-of-note": {
+      "patchboard-atlas": "F:\\lion\\github\\patchboard-atlas"
+    },
+    "specs-of-note": {
+      "patchboard.spec.messages.core.v1": {
+        "document_id": "patchboard.spec.messages.core.v1",
+        "filepath": "F:/lion/github/filetalk/docs/spec/patchboard-core.v1.json",
+        "title": "Patchboard Core Message Specification",
+        "purpose": "Define the Patchboard system, and the core Patchboard message in particular."
+      },
+      "patchboard.spec.messages.file-transport.v1": {
+        "document_id": "patchboard.spec.messages.file-transport.v1",
+        "filepath": "F:/lion/github/filetalk/docs/spec/patchboard-file-transport.v1.json",
+        "title": "Patchboard File Transport Profile",
+        "purpose": "Documents how Patchboard messages transport on the filesystem."
+      },
+      "lionscliapp.api.v1": {
+        "document_id": "lionscliapp.api.v1",
+        "filepath": "f:/lion/github/lionscliapp/doc/lionscliapp_api.json",
+        "title": "Lion's CLI App (lionscliapp) API Documentation",
+        "purpose": "document how to use Lion's CLI App"
+      },
+      "tkintertester.spec.v0.1": {
+        "document_id": "tkintertester.spec.v0.1",
+        "filepath": "F:/lion/github/tkintertester/tkintertester_spec.json",
+        "title": "tkintertester Specification",
+        "purpose": "specify tkintertester -- a minimal, event-loop-native test harness for Tkinter GUI applications without async"
+      },
+      "lionsphilosophyofprogramming.2025.simplified": {
+        "document_id": "lionsphilosophyofprogramming.2025.simplified",
+        "filepath": "F:/lion/github/lions-documents/coding-guidelines/v2026-01-14_part2_lions-philosophy-of-programming_simplified.json",
+        "title": "Lion's Python Programming Guidelines (2025) -- Simplified Edition",
+        "purpose": "simplified JSON version, for use by LLM programming agents"
+      },
+      "spec.filetalk-patchboard-router": {
+        "document_id": "spec.filetalk-patchboard-router",
+        "filepath": "f:/lion/github/filetalk/docs/spec/patchboard-router.v0.1.json",
+        "title": "Patchboard Router All-Aspects Design Document",
+        "purpose": "complete design of the Patchboard router"
+      }
+    },
+    "proposed-patchboard-atlas-spec": {
+      "source": "https://chatgpt.com/c/69817e93-df78-8331-846e-2d95e7dfab7f",
+      "proposal": {
+        "document": {
+          "document_id": "patchboard-atlas.spec",
+          "title": "Patchboard Atlas Master Specification",
+          "purpose": "Defines the Patchboard Atlas tool: its intent, scope, design principles, internal data models, and interaction grammar. This document is the authoritative root specification for the Patchboard Atlas project.",
+          "version": "0.1",
+          "type": "master-spec",
+          "status": "draft",
+          "depends_on": [
+            "tkintertester.spec.v0.1",
+            "lionscliapp.initial-spec.v0_3",
+            "patchboard.spec.messages.core.v1",
+            "patchboard.spec.messages.file-transport.v1"
+          ],
+          "notes": "This specification intentionally separates project definition from runtime state and operational data. Patchboard Atlas observes and influences Patchboard Routers exclusively via FileTalk message exchange and published state artifacts."
+        },
+        "content": {
+          "overview": {
+            "summary": "Patchboard Atlas is a graphical configuration and observation tool for FileTalk Patchboard Routers. It provides a canvas-based interface for placing components, wiring connections, and visualizing routing topology, while treating the Patchboard Router as the sole authoritative source of routing state.",
+            "non_goals": [
+              "Direct mutation of router internal state",
+              "Defining message transport semantics",
+              "Executing or hosting FileTalk components",
+              "Providing delivery guarantees or acknowledgements beyond those defined by Patchboard Router"
+            ]
+          },
+          "project": {
+            "name": "patchboard-atlas",
+            "version": "0.1",
+            "kind": "graphical-tool",
+            "domain": "filetalk",
+            "role": "patchboard-visual-configurator",
+            "description": "A graphical editor and observer for FileTalk Patchboard Routers, implemented in Python using Tkinter and Canvas."
+          },
+          "design_principles": [
+            "Observer-first architecture: the router is always authoritative",
+            "All routing mutations are requested indirectly via FileTalk messages",
+            "Patchboard Atlas never assumes immediate success of user actions",
+            "Canvas rendering is driven exclusively by a pure data model",
+            "Eventual convergence is preferred over synchronous confirmation",
+            "Underspecified interaction is acceptable; architectural clarity is not"
+          ],
+          "architectural-role": {
+            "atlas": {
+              "role": "observer-and-requestor",
+              "responsibilities": [
+                "Render a visual model of components and routes",
+                "Emit link and unlink requests via FileTalk messages",
+                "Observe router change notices and re-read published state",
+                "Reconcile visual intent with authoritative router state"
+              ],
+              "explicit_non_responsibilities": [
+                "Maintaining authoritative routing tables",
+                "Guaranteeing delivery or ordering semantics",
+                "Performing component execution or scheduling"
+              ]
+            },
+            "router": {
+              "role": "authoritative-routing-engine",
+              "relationship": "Patchboard Atlas treats all router-published state as authoritative and opaque."
+            }
+          },
+          "component-id-card-schema": {
+            "schema_version": "1",
+            "purpose": "Defines the declarative structure used to describe component types known to Patchboard Atlas.",
+            "required_fields": [
+              "component_type",
+              "title",
+              "channels"
+            ],
+            "channels_shape": {
+              "in": "array[string]",
+              "out": "array[string]"
+            },
+            "notes": "Component ID Cards describe connectable affordances only. They do not encode filesystem paths, runtime configuration, or execution semantics."
+          },
+          "built-in-components": {
+            "schema_version": "1",
+            "purpose": "Defines component types built into Patchboard Atlas for initial operation and testing.",
+            "components": [
+              {
+                "component_type": "patchboard.router",
+                "title": "Patchboard Router",
+                "channels": {
+                  "in": [
+                    "link",
+                    "unlink",
+                    "quit"
+                  ],
+                  "out": [
+                    "notice",
+                    "startup",
+                    "shutdown"
+                  ]
+                }
+              }
+            ]
+          },
+          "atlas-world-model-schema": {
+            "schema_version": "1",
+            "purpose": "Defines the internal world model rendered by the Atlas canvas and manipulated by user interaction.",
+            "entities": {
+              "component_instance": {
+                "fields": [
+                  "instance_id",
+                  "component_type",
+                  "position"
+                ],
+                "notes": "Component instances represent visual placements, not authoritative runtime entities."
+              },
+              "wire": {
+                "fields": [
+                  "from",
+                  "to",
+                  "status"
+                ],
+                "notes": "Wire status may include transient or pending states reflecting reconciliation with router state."
+              }
+            }
+          },
+          "interaction-rules": {
+            "purpose": "Defines the abstract interaction grammar supported by Patchboard Atlas. These actions describe user intent, not specific gestures or input devices.",
+            "actions": [
+              "add_component",
+              "delete_component",
+              "move_component",
+              "begin_wire",
+              "complete_wire",
+              "cancel_wire"
+            ],
+            "notes": "Gesture mapping (mouse buttons, drag semantics, keyboard shortcuts) is explicitly out of scope for this specification."
+          },
+          "reconciliation-model": {
+            "purpose": "Describes how Patchboard Atlas reconciles user intent with authoritative router state.",
+            "principles": [
+              "User actions emit requests, not state changes",
+              "Router emits coarse-grained change notices",
+              "Atlas responds by re-reading published router state",
+              "Visual state converges toward authoritative truth"
+            ],
+            "notes": "Temporary visual divergence (e.g., pending wires) is considered a feature, not a failure."
+          },
+          "testing-strategy": {
+            "purpose": "Defines the testing posture for Patchboard Atlas.",
+            "layers": [
+              {
+                "name": "pure-logic-tests",
+                "description": "Non-GUI tests validating data models, reconciliation logic, and invariants."
+              },
+              {
+                "name": "event-loop-tests",
+                "description": "Tkinter-based automated tests executed inside a real Tk mainloop using tkintertester."
+              }
+            ]
+          },
+          "test-expectations": {
+            "invariants": [
+              "component_instances_have_unique_ids",
+              "wires_connect_existing_ports",
+              "no_gui_action_mutates_router_state_directly",
+              "visual_state_can_be_reconstructed_from_model"
+            ]
+          }
+        }
+      }
+    },
+    "ideas-kicking-around": {
+      "tkinter-testing": "the idea of creating a digital twin of the GUI for the purpose of testing; GUI interactions affect the program via the virtual GUI",
+      "salvage-strategy": "decompose the marginalia-atlas salvage pieces into individual testable units with clear framing boundaries for test execution"
+    }
+  },
+  "salvage-operation": {
+    "subject": "salvaging code from marginalia-atlas",
+    "functional-areas": {
+      "coordinate-machine": {},
+      "projection-machinery": {
+        "includes": [
+          "rules",
+          "rendering",
+          "reconciliation-via-add-change-delete"
+        ]
+      },
+      "camera": {},
+      "drag-vs-pan-interaction": {},
+      "canvas-gui-scaffolding": {},
+      "model-database": {},
+      "selection-interaction": {
+        "includes": [
+          "highlighting",
+          "gui-events"
+        ]
+      }
+    }
+  }
+}
