@@ -14,7 +14,11 @@
     "text": "We can reuse significant pieces of Marginalia Atlas (UI patterns, canvas projection logic, model<->view reconciliation) for Patchboard Atlas.\nThis is a slavage operation that reduces risk and preserves continuity.",
     "conversations-with-Wing-Cat": {
       "main-conversation-about-patchboard-atlas": "https://chatgpt.com/c/69817e93-df78-8331-846e-2d95e7dfab7f",
-      "salvaging-marginalia-atlas-material": "https://chatgpt.com/c/69817e93-df78-8331-846e-2d95e7dfab7f",
+      "salvaging-marginalia-atlas-material": {
+        "url": "https://chatgpt.com/c/69817e93-df78-8331-846e-2d95e7dfab7f",
+        "specific-notes": "Salvaging Marginalia Atlas is the right instinct\n\nYou’ve already named the five subsystems correctly:\n* Coordinate machine\n* Camera\n* Render pipeline (model → Canvas)\n* Interaction system (mouse → world)\n* Tk widget configuration\n\nHere’s the critical move:\n* Salvage by extraction, not by reuse\n\nPull each subsystem into:\n* a minimal, testable module\n* with zero Marginalia semantics left\n* logic tests\n* tkintertests\n\nTreat Marginalia Atlas as:\n* a fossil record\n* not a dependency\n\nThis is how you prevent emotional coupling to old decisions.\n",
+        "marginalia-atlas-path": "F:\\lion\\github\\marginalia-atlas\\src\\marginaliaatlas\\code.py"
+      },
       "declarative-model-and-quasi-idempotency": {
         "source-conversation": "https://chatgpt.com/c/6981fd07-2c54-8325-8d3b-5df3bddec2f8",
         "images-upload-conversation": "https://chatgpt.com/c/6982f2df-77e4-832c-8964-c8febceb9330",

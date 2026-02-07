@@ -17,6 +17,44 @@
     "github": "https://github.com/LionKimbro/patchboard-atlas",
     "conversations": {
       "first-conversation": "https://chatgpt.com/g/g-p-6965e8dcf0388191b49d2611e683eef8-filetalk-epoch-5-core-spec/c/69817e93-df78-8331-846e-2d95e7dfab7f"
+    },
+    "support-documentation": {
+      "patchboard.spec.messages.core.v1": {
+        "document_id": "patchboard.spec.messages.core.v1",
+        "filepath": "F:/lion/github/filetalk/docs/spec/patchboard-core.v1.json",
+        "title": "Patchboard Core Message Specification",
+        "purpose": "This describes how the Patchboard system works, and how messages are defined in it."
+      },
+      "patchboard.spec.messages.file-transport.v1": {
+        "document_id": "patchboard.spec.messages.file-transport.v1",
+        "filepath": "F:/lion/github/filetalk/docs/spec/patchboard-file-transport.v1.json",
+        "title": "Patchboard File Transport Profile",
+        "purpose": "This describes how files and folders are used in the Patchboard system, to communicate messages."
+      },
+      "lionscliapp.api.v1": {
+        "document_id": "lionscliapp.api.v1",
+        "filepath": "f:/lion/github/lionscliapp/doc/lionscliapp_api.json",
+        "title": "Lion's CLI App (lionscliapp) API Documentation",
+        "purpose": "Patchboard Atlas will be invoked via the lionscliapp module, this is the documentation for it."
+      },
+      "tkintertester.spec.v0.1": {
+        "document_id": "tkintertester.spec.v0.1",
+        "filepath": "F:/lion/github/tkintertester/tkintertester_spec.json",
+        "title": "tkintertester Specification",
+        "purpose": "I want to be able to run tests with tkinter, and that requires some special handling.  This is the specification (and some examples) for how to use tkintester to do so.  It does require some specific structuring of the program, though, so be alert here."
+      },
+      "lionsphilosophyofprogramming.2025.simplified": {
+        "document_id": "lionsphilosophyofprogramming.2025.simplified",
+        "filepath": "F:/lion/github/lions-documents/coding-guidelines/v2026-01-14_part2_lions-philosophy-of-programming_simplified.json",
+        "title": "Lion's Python Programming Guidelines (2025) -- Simplified Edition",
+        "purpose": "These are my general Python programming guidelines, in a simplified form."
+      },
+      "spec.filetalk-patchboard-router": {
+        "document_id": "spec.filetalk-patchboard-router",
+        "filepath": "f:/lion/github/filetalk/docs/spec/patchboard-router.v0.1.json",
+        "title": "Patchboard Router All-Aspects Design Document",
+        "purpose": "Ultimately, Patchboard Atlas is here to command the Patchboard Router.  This is the specification guide for said router, until I get around to making merely an API reference for it."
+      }
     }
   },
   "content": {
