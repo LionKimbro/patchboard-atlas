@@ -8,25 +8,82 @@ import tkinter as tk
 from tkinter import ttk
 
 
-g = {
-    "gui-created": False,
-    "status-color": "foreground",
-    "quit-on-close": True,
-}
-
-widgets = {}
-
-sv = {}
-
 colors = {
     "bg": "#1e1e1e",
     "pane-bg": "#2a2a2a",
     "button-bg": "#333333",
     "foreground": "#e6e6e6",
     "error": "#ff6b6b",
+    "red": "#ff6b6b",
     "success": "#6bff95",
+    "green": "#6bff95",
     "info": "#6bb7ff",
+    "blue": "#6bb7ff"
 }
+
+FOREGROUND = "FOREGROUND"  # semantics: default
+RED = "RED"  # semantics: "error" or "alert"
+GREEN = "GREEN"  # semantics: "success" or "definitional"
+BLUE = "BLUE"  # semantics: "info" or "structure"
+
+status_colors = {
+    FOREGROUND: "foreground",
+    RED: "red",
+    GREEN: "green",
+    BLUE: "blue",
+}
+
+g = {
+    "gui-created": False,
+    "status-color": FOREGROUND,
+    "quit-on-close": True,
+}
+
+
+# Widget registry — structural scaffold.
+# All widgets are registered here so that the GUI structure
+# is visible statically while reading the file.
+# Values are populated at runtime.
+
+widgets = {
+
+    # --- roots ---
+    "root": None,
+    "main-window": None,
+    "console-window": None,
+
+    # --- layout spine ---
+    "panes": None,
+
+    # --- left tree pane ---
+    "tree-pane": None,
+    "tree-label": None,
+
+    # --- canvas pane ---
+    "canvas-pane": None,
+    "canvas": None,
+    "canvas-y-scroll": None,
+    "canvas-x-scroll": None,
+
+    # --- inspector pane ---
+    "inspector-pane": None,
+    "inspector-label": None,
+
+    # --- status bar ---
+    "status-frame": None,
+    "status-label": None,
+
+    # --- button bar ---
+    "button-frame": None,
+    "console-button": None,
+
+    # --- console window contents ---
+    "console-output": None,
+    "console-input": None,
+}
+
+
+sv = {}
 
 
 def create_gui(root):
@@ -120,7 +177,7 @@ def create_gui(root):
         status_frame,
         textvariable=sv["status-text"],
         bg=colors["bg"],
-        fg=colors[g["status-color"]],
+        fg=colors[status_colors[g["status-color"]]],
         anchor="w",
         padx=8,
         pady=4,
@@ -156,6 +213,7 @@ def destroy_gui():
     widgets.clear()
     sv.clear()
     g["gui-created"] = False
+    g["status-color"] = FOREGROUND
 
 
 def open_console_window():
@@ -188,3 +246,15 @@ def open_console_window():
     input_entry = tk.Entry(console_window, bg=colors["bg"], fg=colors["foreground"])
     input_entry.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 8))
     widgets["console-input"] = input_entry
+
+
+def set_status(message, color):
+    """
+    Update the status bar message and color.
+    """
+    sv["status-text"].set(message)
+    g["status-color"] = color
+    status_label = widgets.get("status-label")
+    if status_label is not None and status_label.winfo_exists():
+        key = status_colors[color]
+        status_label.configure(fg=colors[key])

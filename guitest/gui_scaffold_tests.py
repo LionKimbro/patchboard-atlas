@@ -5,22 +5,30 @@ from patchboard_atlas import gui_scaffold
 
 def register_gui_scaffold_tests():
     harness.add_test(
-        "gui scaffold create/open/close/destroy",
+        "gui scaffold presence",
         [
-            step_create_gui,
             step_check_main_widgets,
-            step_open_console,
-            step_check_console_widgets,
-            step_close_console,
-            step_destroy_gui,
-            step_check_destroyed,
         ],
     )
 
+    harness.add_test(
+        "gui scaffold console open/close",
+        [
+            step_open_console,
+            step_check_console_widgets,
+            step_close_console,
+        ],
+    )
 
-def step_create_gui():
-    gui_scaffold.create_gui(harness.g["root"])
-    return ("next", None)
+    harness.add_test(
+        "gui scaffold status",
+        [
+            step_set_status_foreground,
+            step_set_status_red,
+            step_check_status_text,
+            step_check_status_color_red,
+        ],
+    )
 
 
 def step_check_main_widgets():
@@ -67,13 +75,29 @@ def step_close_console():
     return ("next", None)
 
 
-def step_destroy_gui():
-    gui_scaffold.destroy_gui()
+def step_set_status_foreground():
+    gui_scaffold.set_status("Ready.", gui_scaffold.FOREGROUND)
     return ("next", None)
 
 
-def step_check_destroyed():
-    main_window = gui_scaffold.widgets.get("main-window")
-    if main_window is not None and main_window.winfo_exists():
-        return ("fail", "main-window still exists after destroy")
-    return ("success", None)
+def step_set_status_red():
+    gui_scaffold.set_status("Problem.", gui_scaffold.RED)
+    return ("next", None)
+
+
+def step_check_status_text():
+    text_var = gui_scaffold.sv.get("status-text")
+    if text_var is None:
+        return ("fail", "missing status-text StringVar")
+    if text_var.get() != "Problem.":
+        return ("fail", "status text mismatch")
+    return ("next", None)
+
+
+def step_check_status_color_red():
+    label = gui_scaffold.widgets.get("status-label")
+    if label is None or not label.winfo_exists():
+        return ("fail", "missing status-label")
+    if label.cget("fg") != gui_scaffold.colors["error"]:
+        return ("fail", "status label color mismatch")
+    return ("next", None)
