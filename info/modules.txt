@@ -1,0 +1,32 @@
+date: 2026-02-11
+
+== Python modules in src/patchboard_atlas/ ==
+date: 2026-02-11
+
+scaffolding:
+  __init__.py  -- package scaffolding
+
+execution framework:
+  cliapp.py  -- CLI outer shell, and main execution
+    * reset()  -- master reset fn [TOWRITE]
+
+GUI:
+  gui_scaffold.py  -- constructs the tri-pane structure
+  tree_projection.py  -- derived projection of loaded_component_id_cards into Tree widget nodes
+
+logical processing:
+  coord_machine.py  -- coordinate conversions register machine
+
+Component ID Cards:
+  component_registry.py  [TOWRITE] -- canonical data cache for loaded Component ID Cards
+
+== Documentation in docs/spec ==
+date: 2026-02-11
+
+specification:
+  patchboard-atlas.spec.json  -- overall specification
+
+feature development:
+  #01 2026-02-07 patchboard-atlas.gui-scaffold.json  -- making the GUI
+  #02 2026-02-11 component-id-card-ingestion-and-tree-projection.json  -- components ingestion and inventory
+

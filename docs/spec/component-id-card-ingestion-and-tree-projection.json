@@ -1,0 +1,182 @@
+{
+  "feature": "component-id-card-ingestion-and-tree-projection",
+  "purpose": "Implements ingestion of live Component ID Cards and projection into the Tree pane in the left panel. This feature does not create ECS entities or spatial placements.",
+  "scope": [
+    "Load Component ID Cards into loaded_component_id_cards",
+    "Populate Tree widget with entries representing available components",
+    "Keep Tree synchronized with loaded_component_id_cards",
+    "No ECS creation",
+    "No spatial placement",
+    "No routing or wire rendering"
+  ],
+  "data-flow": {
+    "source": "External ID card provider (filesystem folder, filesystem specific JSON card, patchboard inbox for the atlas itself, or other future loader)",
+    "cache": "(patchboard-atlas.spec).content.internal-data.external-caches.loaded_component_id_cards",
+    "projection-target": "tree-pane.component-tree"
+  },
+  "defined-state": {
+    "loaded_component_id_cards": {
+      "defined-in": {
+        "module": "component_registry.py",
+        "name": "loaded_component_id_cards"
+      },
+      "type": "dict[str -> component_id_card]",
+      "description": "Canonical inbox path keyed dictionary of live component ID cards."
+    },
+    "tree_component_nodes": {
+      "defined-in": {
+        "module": "tree_projection.py",
+        "name": "tree_component_nodes"
+      },
+      "type": "dict[str -> tree_node_id]",
+      "description": "Maps canonical inbox paths to Tree widget node identifiers.",
+      "notes": "Derived state. Must be rebuilt or reconciled whenever loaded_component_id_cards changes."
+    }
+  },
+  "tree-node-format": {
+    "node-id": "Tree widget internal identifier",
+    "text": "component_id_card.title",
+    "values": {
+      "inbox": "component_id_card.inbox",
+      "outbox": "component_id_card.outbox"
+    },
+    "tags": [
+      "component"
+    ]
+  },
+  "projection-rules": [
+    "The Tree is a pure projection of loaded_component_id_cards.",
+    "Tree nodes must not exist without corresponding ID cards.",
+    "If an ID card is added, a Tree node must be added.",
+    "If an ID card is removed, the corresponding Tree node must be removed.",
+    "Tree ordering is not semantically meaningful unless later specified."
+  ],
+  "reconciliation-algorithm": {
+    "trigger": "loaded_component_id_cards refreshed",
+    "steps": [
+      "Compute current Tree keys (from tree_component_nodes)",
+      "Compute current card keys (from loaded_component_id_cards)",
+      "For keys in cards but not in tree → insert new Tree nodes",
+      "For keys in tree but not in cards → delete Tree nodes",
+      "For keys in both → update node text if title changed"
+    ],
+    "notes": "Full rebuild is acceptable in v0.1. Incremental diffing is optional."
+  },
+  "ui-contract": {
+    "tree-pane-id": "main-pane-row.left-pane.component-tree",
+    "selection-behavior": [
+      "Selecting a Tree node highlights it",
+      "Selection does not create ECS entities",
+      "Selection does not modify router state"
+    ],
+    "events-emitted": [
+      "component-selected (inbox-path)"
+    ]
+  },
+  "manual-component-id-card-ingestion": {
+    "feature": "manual-component-id-card-ingestion",
+    "purpose": "Allows the user to manually import one or more Component ID Cards via the File menu, triggering ingestion and Tree projection.",
+    "ui-entry-point": {
+      "menu-bar": {
+        "required": true,
+        "defined-in": {
+          "module": "gui_scaffold.py",
+          "name": "<unknown>"
+        },
+        "menus": [
+          {
+            "label": "File",
+            "items": [
+              {
+                "label": "Import Card...",
+                "underline": 0,
+                "command": "cmd_import_component_id_card_file"
+              },
+              {
+                "label": "Import Card Folder...",
+                "underline": 12,
+                "command": "cmd_import_component_id_card_folder"
+              },
+              "separator",
+              {
+                "label": "Exit",
+                "underline": 1,
+                "command": "<unknown>"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "commands": {
+      "cmd_import_component_id_card_file": {
+        "description": "Opens a file dialog allowing selection of a single JSON Component ID Card.",
+        "flow": [
+          "Open file dialog (filter: *.json)",
+          "Read selected file",
+          "Parse JSON",
+          "Validate against component-id-card-schema",
+          "Insert into loaded_component_id_cards using canonical inbox as key",
+          "Trigger tree reconciliation"
+        ]
+      },
+      "cmd_import_component_id_card_folder": {
+        "description": "Opens a directory dialog allowing selection of a folder containing multiple Component ID Card JSON files.",
+        "flow": [
+          "Open directory dialog",
+          "Enumerate *.json files",
+          "For each file:",
+          "  Read file",
+          "  Parse JSON",
+          "  Validate against component-id-card-schema",
+          "  Insert into loaded_component_id_cards using canonical inbox as key",
+          "After batch complete → trigger tree reconciliation"
+        ]
+      }
+    },
+    "validation-rules": [
+      "schema_version must equal 1",
+      "inbox and outbox must be canonical absolute paths",
+      "channels.in and channels.out must be arrays of strings",
+      "Channel names must be unique within their respective arrays"
+    ],
+    "error-handling": {
+      "invalid-json": "Display error in status bar (error color)",
+      "schema-invalid": "Display validation failure in status bar (error color)",
+      "duplicate-inbox": "Overwrite existing entry and display info status"
+    },
+    "data-updates": {
+      "target-cache": "loaded_component_id_cards",
+      "key": "component_id_card.inbox (canonical)",
+      "behavior": "Insert or replace entry"
+    },
+    "reconciliation": {
+      "after-ingestion": [
+        "Rebuild or reconcile tree_component_nodes",
+        "Tree becomes exact projection of loaded_component_id_cards"
+      ]
+    },
+    "invariants": [
+      "Ingestion does not create ECS entities",
+      "Ingestion does not modify router state",
+      "Tree can be fully reconstructed from loaded_component_id_cards"
+    ],
+    "non-goals": [
+      "Auto-refresh from filesystem",
+      "Component execution",
+      "Automatic spatial placement"
+    ]
+  },
+  "invariants": [
+    "Every Tree node corresponds to exactly one loaded Component ID Card.",
+    "Tree does not contain nodes for placed ECS entities unless they also have ID cards.",
+    "Tree state can be fully reconstructed from loaded_component_id_cards."
+  ],
+  "non-goals": [
+    "Spatial placement",
+    "Component dragging",
+    "Wire rendering",
+    "Router interaction",
+    "Persistence of UI selection"
+  ]
+}

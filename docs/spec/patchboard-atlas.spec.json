@@ -107,18 +107,24 @@
     },
     "component-id-card-schema": {
       "schema_version": "1",
-      "purpose": "Defines the declarative structure used to describe a single components known to Patchboard Atlas.",
-      "required_fields": {
-        "title": "(str) title for the component",
-        "channels": "(see below) the in and out channels on this component",
-        "inbox": "(str) the full absolute path to the inbox folder for the component",
-        "outbox": "(str) the full absolute path to the outbox folder for the component"
+      "purpose": "Defines the declarative structure of a single live Component ID Card describing an already-running FileTalk component. These cards are instance representations, not type definitions.",
+      "description": "A Component ID Card is a self-description emitted or provided by a running FileTalk component. Patchboard Atlas consumes these cards to render and wire live components.",
+      "record-format": {
+        "schema_version": "int -- must equal 1",
+        "title": "str -- human-readable name for the running component",
+        "channels": {
+          "in": "list[str] -- channel names accepted by this component",
+          "out": "list[str] -- channel names emitted by this component"
+        },
+        "inbox": "str -- canonical absolute path to this component's INBOX folder",
+        "outbox": "str -- canonical absolute path to this component's OUTBOX folder"
       },
-      "channels_shape": {
-        "in": "(array[string]) the channels leading into the component",
-        "out": "(array[string]) the channels extending out from the component"
-      },
-      "notes": "Component ID Cards describe connectable affordances only. They do not encode filesystem paths, runtime configuration, or execution semantics."
+      "invariants": [
+        "inbox and outbox must be canonical absolute paths.",
+        "Channel names must be unique within their respective 'in' and 'out' arrays.",
+        "The ID card represents a single running component instance."
+      ],
+      "notes": "Component ID Cards describe connectable affordances and runtime folder bindings for live processes. They do not define component types, execution behavior, or routing state. Routing topology remains authoritative in patchboard-router routes.json."
     },
     "built-in-components": {
       "schema_version": "1",
@@ -162,6 +168,120 @@
           ],
           "notes": "Wire status may include transient or pending states reflecting reconciliation with router state."
         }
+      }
+    },
+    "internal-data": {
+      "description": "Defines the concrete in-memory data structures used during execution. These structures are implemented as module-level dictionaries and scalars. This is not a persistence format.",
+      "naming-conventions": {
+        "g_": "Scalar global values.",
+        "cmp_": "ECS component maps keyed by ECS ID.",
+        "idx_": "Maintained indices derived from ECS or external data.",
+        "loaded_": "Externally sourced cached data."
+      },
+      "globals": {
+        "g['next_entity_id']": {
+          "defined-in": {
+            "module": "ecs_world.py",
+            "name": "g_next_entity_id"
+          },
+          "type": "int",
+          "description": "Monotonically increasing positive integer used to assign new ECS IDs."
+        }
+      },
+      "ecs-state": {
+        "cmp_entities": {
+          "defined-in": {
+            "module": "ecs_world.py",
+            "name": "cmp_entities"
+          },
+          "type": "set[int]",
+          "description": "Set of active ECS IDs."
+        },
+        "cmp_spatial": {
+          "defined-in": {
+            "module": "ecs_world.py",
+            "name": "cmp_spatial"
+          },
+          "type": "dict[int -> spatial_record]",
+          "description": "World-space placement of entities.",
+          "record-format": {
+            "x": "int -- top-left X position in world pixels",
+            "y": "int -- top-left Y position in world pixels",
+            "width": "int -- width in world pixels",
+            "height": "int -- height in world pixels"
+          },
+          "notes": "World coordinates are integer pixel units before camera transform."
+        },
+        "cmp_card_ref": {
+          "defined-in": {
+            "module": "ecs_world.py",
+            "name": "cmp_card_ref"
+          },
+          "type": "dict[int -> component_id_card]",
+          "description": "Maps ECS IDs to their associated Component ID Card objects. Each entry represents a placed component instance in the ECS world. The referenced Component ID Card supplies title, channels, inbox, and outbox data. The component_id_card value must be one of the objects contained in loaded_component_id_cards; no duplication of card data is permitted within the ECS."
+        }
+      },
+      "reverse-indices": {
+        "idx_folder_to_entity": {
+          "defined-in": {
+            "module": "router_projection.py",
+            "name": "idx_folder_to_entity"
+          },
+          "type": "dict[str -> int]",
+          "description": "Maps canonical folder paths to ECS IDs.",
+          "notes": "Derived from component configuration; not part of ECS."
+        }
+      },
+      "external-caches": {
+        "loaded_router_routes": {
+          "defined-in": {
+            "module": "router_projection.py",
+            "name": "loaded_router_routes"
+          },
+          "type": "list[route_record]",
+          "description": "Cached contents of Patchboard Router routes.json.",
+          "record-format": {
+            "source-folder": "str (canonical absolute path)",
+            "source-channel": "str",
+            "destination-folder": "str (canonical absolute path)",
+            "destination-channel": "str"
+          },
+          "notes": "Authoritative schema defined in patchboard.spec.messages.core.v1 and file-transport.v1. Re-read fully on router notice. Atlas does not diff incrementally; the cache is replaced wholesale."
+        },
+        "loaded_component_id_cards": {
+          "defined-in": {
+            "module": "component_registry.py",
+            "name": "loaded_component_id_cards"
+          },
+          "type": "dict[str -> component_id_card]",
+          "description": "Cached Component ID Cards describing currently running FileTalk components.",
+          "key": "str -- canonical absolute inbox path used as primary key",
+          "record-format": {
+            "schema_version": "int",
+            "title": "str",
+            "channels": {
+              "in": "list[str]",
+              "out": "list[str]"
+            },
+            "inbox": "str (canonical absolute path)",
+            "outbox": "str (canonical absolute path)"
+          },
+          "notes": "Loaded from external sources (e.g., filesystem or service registry). Represents live component instances only. Cache is replaced wholesale on refresh."
+        }
+      },
+      "camera": {
+        "defined-in": {
+          "module": "coord_machine.py",
+          "name": "cam"
+        },
+        "type": "dict",
+        "fields": {
+          "x": "int -- world offset",
+          "y": "int -- world offset",
+          "zoom-num": "int -- zoom numerator",
+          "zoom-den": "int -- zoom denominator"
+        },
+        "notes": "Zoom is represented as a rational number (zoom-num / zoom-den) to avoid cumulative floating-point error."
       }
     },
     "interaction-rules": {
@@ -209,8 +329,12 @@
     },
     "development-process": {
       "initial-goals": [
-        "establish 2-part testing basis (guitest, test)",
-        "salvage marginalia-atlas"
+        "DONE: establish 2-part testing basis (guitest, test)",
+        "DONE: salvage marginalia-atlas: coordinates drawing",
+        "get the data model for components and logic and rendering in place",
+        "start with being able to depict components",
+        "pan and fixed-levels zoom [no text during zoom, initially]",
+        "operations"
       ]
     }
   }
