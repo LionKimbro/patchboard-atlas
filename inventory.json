@@ -17,6 +17,42 @@
       "filepath": "docs/spec/component-id-card-ingestion-and-tree-projection.json",
       "title": "Component ID Card Ingestion & Tree Projection feature",
       "purpose": "contain details on how to ingest Component ID Cards, & Display"
+    },
+    "lionscliapp.api.v1": {
+      "document_id": "lionscliapp.api.v1",
+      "filepath": "F:/lion/github/lionscliapp/doc/lionscliapp_api.json",
+      "title": "Lion's CLI App (lionscliapp) API Documentation",
+      "purpose": "document how to use Lion's CLI App"
+    },
+    "tkintertester.with_lionscliapp.spec.v0.1": {
+      "document_id": "tkintertester.with_lionscliapp.spec.v0.1",
+      "filepath": "F:/lion/github/tkintertester/docs/with-lionscliapp.json",
+      "title": "Using tkintertester with lionscliapp",
+      "purpose": "Define the canonical integration pattern between lionscliapp and tkintertester while preserving lifecycle separation and unified execution."
+    },
+    "tkintertester.spec.v0.1": {
+      "document_id": "tkintertester.spec.v0.1",
+      "filepath": "F:/lion/github/tkintertester/docs/spec/tkintertester_spec.json",
+      "title": "tkintertester Specification",
+      "purpose": "specify tkintertester -- a minimal, event-loop-native test harness for Tkinter GUI applications without async"
+    },
+    "patchboard.spec.messages.core.v1": {
+      "document_id": "patchboard.spec.messages.core.v1",
+      "filepath": "F:/lion/github/filetalk/docs/spec/patchboard-core.v1.json",
+      "title": "Patchboard Core Message Specification",
+      "purpose": "Define the Patchboard system, and the core Patchboard message in particular."
+    },
+    "patchboard.spec.messages.file-transport.v1": {
+      "document_id": "patchboard.spec.messages.file-transport.v1",
+      "filepath": "F:/lion/github/filetalk/docs/spec/patchboard-file-transport.v1.json",
+      "title": "Patchboard File Transport Profile",
+      "purpose": "Documents how Patchboard messages transport on the filesystem."
+    },
+    "spec.filetalk-patchboard-router": {
+      "document_id": "spec.filetalk-patchboard-router",
+      "filepath": "F:/lion/github/filetalk/docs/spec/patchboard-router.v0.1.json",
+      "title": "Patchboard Router All-Aspects Design Document",
+      "purpose": "complete design of the Patchboard router"
     }
   }
 }
