@@ -9,6 +9,8 @@ import lionscliapp as app
 from tkintertester import harness
 
 from patchboard_atlas import gui_scaffold
+from patchboard_atlas import startup
+from patchboard_atlas.reset import reset
 
 
 def run():
@@ -30,9 +32,10 @@ def run():
 
 def app_entry():
     """
-    Create the GUI application instance.
+    Create the GUI application instance and perform startup load.
     """
     gui_scaffold.create_gui(harness.g["root"])
+    startup.startup_load()
 
 
 def app_reset():
@@ -40,6 +43,7 @@ def app_reset():
     Tear down the GUI application instance between tests.
     """
     gui_scaffold.destroy_gui()
+    reset()
 
 
 def register_tests():
@@ -59,8 +63,10 @@ def register_tests():
             break
 
     from guitest.gui_scaffold_tests import register_gui_scaffold_tests
+    from guitest.tree_projection_tests import register_tree_projection_tests
 
     register_gui_scaffold_tests()
+    register_tree_projection_tests()
 
 
 def main():

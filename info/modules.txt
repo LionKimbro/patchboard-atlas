@@ -9,6 +9,10 @@ scaffolding:
 execution framework:
   cliapp.py  -- CLI outer shell, and main execution
     * reset()  -- master reset fn [TOWRITE]
+  startup.py  -- GUI startup routines
+  reset.py  -- master resetting routines
+  log.py  -- logging
+  mem.py  -- S, var for dataflow1
 
 GUI:
   gui_scaffold.py  -- constructs the tri-pane structure
@@ -18,7 +22,8 @@ logical processing:
   coord_machine.py  -- coordinate conversions register machine
 
 Component ID Cards:
-  component_registry.py  [TOWRITE] -- canonical data cache for loaded Component ID Cards
+  ecs_world.py  [TOWRITE] -- ECS identity layer w/ g_next_entity_id, cmp_entities, cmp_card_ref, cmp_spatial
+  component_registry.py  -- canonical data cache for loaded Component ID Cards
 
 == Documentation in docs/spec ==
 date: 2026-02-11

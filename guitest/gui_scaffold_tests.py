@@ -34,8 +34,11 @@ def register_gui_scaffold_tests():
 def step_check_main_widgets():
     required = [
         "main-window",
+        "menu-bar",
+        "file-menu",
         "panes",
         "tree-pane",
+        "component-tree",
         "canvas-pane",
         "inspector-pane",
         "canvas",

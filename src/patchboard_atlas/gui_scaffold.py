@@ -5,7 +5,7 @@ This module builds a structural shell only.
 """
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog
 
 
 colors = {
@@ -55,9 +55,13 @@ widgets = {
     # --- layout spine ---
     "panes": None,
 
+    # --- menu bar ---
+    "menu-bar": None,
+    "file-menu": None,
+
     # --- left tree pane ---
     "tree-pane": None,
-    "tree-label": None,
+    "component-tree": None,
 
     # --- canvas pane ---
     "canvas-pane": None,
@@ -113,6 +117,26 @@ def create_gui(root):
     style.configure("Scaffold.TLabel", background=colors["pane-bg"], foreground=colors["foreground"])
     style.configure("Status.TFrame", background=colors["bg"])
     style.configure("ButtonBar.TFrame", background=colors["bg"])
+    style.configure("Tree.Treeview",
+                    background=colors["pane-bg"],
+                    foreground=colors["foreground"],
+                    fieldbackground=colors["pane-bg"])
+
+    # --- Menu bar ---
+    menu_bar = tk.Menu(main_window, tearoff=0)
+    widgets["menu-bar"] = menu_bar
+
+    file_menu = tk.Menu(menu_bar, tearoff=0)
+    file_menu.add_command(label="Import Card...", underline=0,
+                          command=cmd_import_component_id_card_file)
+    file_menu.add_command(label="Import Card Folder...", underline=12,
+                          command=cmd_import_component_id_card_folder)
+    file_menu.add_separator()
+    file_menu.add_command(label="Exit", underline=1, command=cmd_exit)
+    widgets["file-menu"] = file_menu
+
+    menu_bar.add_cascade(label="File", menu=file_menu)
+    main_window.configure(menu=menu_bar)
 
     main_window.columnconfigure(0, weight=1)
     main_window.rowconfigure(0, weight=1)
@@ -129,11 +153,18 @@ def create_gui(root):
 
     tree_pane = ttk.Frame(panes, style="Pane.TFrame", width=200)
     tree_pane.grid_propagate(False)
+    tree_pane.columnconfigure(0, weight=1)
+    tree_pane.rowconfigure(0, weight=1)
     widgets["tree-pane"] = tree_pane
 
-    tree_label = ttk.Label(tree_pane, text="Tree (placeholder)", style="Scaffold.TLabel")
-    tree_label.grid(row=0, column=0, sticky="nw", padx=8, pady=8)
-    widgets["tree-label"] = tree_label
+    component_tree = ttk.Treeview(
+        tree_pane,
+        columns=("eid", "inbox", "outbox"),
+        show="tree",
+        style="Tree.Treeview",
+    )
+    component_tree.grid(row=0, column=0, sticky="nsew")
+    widgets["component-tree"] = component_tree
 
     canvas_pane = ttk.Frame(panes, style="Pane.TFrame")
     canvas_pane.columnconfigure(0, weight=1)
@@ -258,3 +289,57 @@ def set_status(message, color):
     if status_label is not None and status_label.winfo_exists():
         key = status_colors[color]
         status_label.configure(fg=colors[key])
+
+
+def cmd_import_component_id_card_file():
+    """File > Import Card... menu command."""
+    from patchboard_atlas import mem
+    from patchboard_atlas import ecs_world as ecs
+    from patchboard_atlas import component_registry as reg
+    from patchboard_atlas import tree_projection as tp
+
+    filepath = filedialog.askopenfilename(
+        title="Import Component ID Card",
+        filetypes=[("JSON files", "*.json")],
+    )
+    if not filepath:
+        return
+
+    ok, result = reg.ingest_card_from_file(filepath)
+    if not ok:
+        set_status(result, RED)
+        return
+
+    reg.persist_card()
+    eid = ecs.allocate_entity()
+    ecs.cmp_card_ref[eid] = mem.pop()
+    tp.rebuild_tree()
+    set_status(f"Imported: {filepath}", GREEN)
+
+
+def cmd_import_component_id_card_folder():
+    """File > Import Card Folder... menu command."""
+    from patchboard_atlas import mem
+    from patchboard_atlas import ecs_world as ecs
+    from patchboard_atlas import component_registry as reg
+    from patchboard_atlas import tree_projection as tp
+
+    dirpath = filedialog.askdirectory(title="Import Component ID Card Folder")
+    if not dirpath:
+        return
+
+    ok_count, fail_count = reg.ingest_cards_from_folder(dirpath)
+    tp.rebuild_tree()
+    if fail_count == 0:
+        set_status(f"Imported {ok_count} card(s).", GREEN)
+    else:
+        set_status(f"Imported {ok_count}, failed {fail_count}.", RED)
+
+
+def cmd_exit():
+    """File > Exit menu command."""
+    root = widgets.get("root")
+    if root is not None:
+        destroy_gui()
+        if g["quit-on-close"]:
+            root.quit()
