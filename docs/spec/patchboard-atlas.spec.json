@@ -1,6 +1,6 @@
 {
   "document": {
-    "document-id": "patchboard-atlas.spec",
+    "document_id": "patchboard-atlas.spec",
     "version": "0.1",
     "type": "master-spec",
     "purpose": "Defines the Patchboard Atlas tool: its intent, scope, design principles, internal data models, and interaction grammar. This document is the authoritative root specification for the Patchboard Atlas project.",

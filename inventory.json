@@ -1,0 +1,22 @@
+{
+  "inventory": {
+    "patchboard-atlas.spec": {
+      "document_id": "patchboard-atlas.spec",
+      "filepath": "docs/spec/patchboard-atlas.spec.json",
+      "title": "",
+      "purpose": "Defines the Patchboard Atlas tool: its intent, scope, design principles, internal data models, and interaction grammar. This document is the authoritative root specification for the Patchboard Atlas project."
+    },
+    "patchboard-atlas.gui-scaffold": {
+      "document_id": "patchboard-atlas.gui-scaffold",
+      "filepath": "docs/spec/patchboard-atlas.gui-scaffold.json",
+      "title": "",
+      "purpose": "Defines the initial Tkinter GUI scaffolding for Patchboard Atlas. This document specifies window structure, panes, and major widgets only. No application logic, routing logic, or interaction semantics are defined here."
+    },
+    "patchboard-atlas.component-id-card-ingestion": {
+      "document_id": "patchboard-atlas.component-id-card-ingestion",
+      "filepath": "docs/spec/component-id-card-ingestion-and-tree-projection.json",
+      "title": "Component ID Card Ingestion & Tree Projection feature",
+      "purpose": "contain details on how to ingest Component ID Cards, & Display"
+    }
+  }
+}

@@ -1,4 +1,9 @@
 {
+  "document": {
+    "document_id": "patchboard-atlas.component-id-card-ingestion",
+    "title": "Component ID Card Ingestion & Tree Projection feature",
+    "purpose": "contain details on how to ingest Component ID Cards, & Display"
+  },
   "feature": "component-id-card-ingestion-and-tree-projection",
   "purpose": "Implements ingestion of live Component ID Cards and projection into the Tree pane in the left panel. This feature does not create ECS entities or spatial placements.",
   "scope": [
