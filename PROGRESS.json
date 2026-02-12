@@ -1,0 +1,59 @@
+{
+  "document": {
+    "title": "Patchboard Atlas Progress",
+    "description": "Tracks development progress and session notes for Patchboard Atlas."
+  },
+  "progress-notes": {
+    "2026-02-10": {
+      "summary": "Created Patchboard Atlas Python package scaffold and CLI entrypoint. Implemented coordinate machine module with extensive pure-logic tests. Built GUI scaffold module and hooked it into lionscliapp + tkintertester lifecycle. Added GUI scaffold tests and wired them into runtime testing mode. Added .gitignore rules for Python build artifacts and cleaned staged caches.",
+      "current-state": {
+        "cli-entrypoint": "src/patchboard_atlas/cliapp.py",
+        "gui-scaffold": "src/patchboard_atlas/gui_scaffold.py",
+        "coord-machine": "src/patchboard_atlas/coord_machine.py",
+        "logic-tests": "test/test_coord_machine.py",
+        "gui-tests": "guitest/gui_scaffold_tests.py",
+        "script-entry": "pyproject.toml -> project.scripts.patchboard-atlas"
+      },
+      "notes": [
+        "GUI root is provided by tkintertester; create_gui uses that root.",
+        "Close-handler quits the root only when g[\"quit-on-close\"] is true.",
+        "runtime.testing enables GUI tests and exits after completion."
+      ]
+    },
+    "2026-02-12": {
+      "summary": "Implemented Component ID Card ingestion, ECS identity layer, and tree projection.",
+      "modules-created": [
+        "src/patchboard_atlas/mem.py — Forth-style operand stack (S) for data flow between functions",
+        "src/patchboard_atlas/log.py — structured append-only log buffer with flag-based levels (i/w/e)",
+        "src/patchboard_atlas/ecs_world.py — ECS identity layer: cmp_entities, cmp_card_ref, cmp_spatial",
+        "src/patchboard_atlas/component_registry.py — card validation, ingestion, persistence, startup culling",
+        "src/patchboard_atlas/tree_projection.py — projects ECS state into Treeview widget",
+        "src/patchboard_atlas/paths.py — centralized path calculations from lionscliapp execroot",
+        "src/patchboard_atlas/startup.py — thin orchestrator for startup load sequence",
+        "src/patchboard_atlas/reset.py — centralized reset calling all module reset functions"
+      ],
+      "modules-modified": [
+        "src/patchboard_atlas/gui_scaffold.py — replaced tree-label with ttk.Treeview, added menu bar with File menu (Import Card, Import Folder, Exit)",
+        "src/patchboard_atlas/cliapp.py — wired startup_load, reset, and registered tree_projection GUI tests"
+      ],
+      "tests-created": [
+        "test/test_log.py — 10 pure-logic tests",
+        "test/test_ecs_world.py — 10 pure-logic tests",
+        "test/test_component_registry.py — 29 pure-logic tests",
+        "guitest/tree_projection_tests.py — 9 GUI tests via tkintertester"
+      ],
+      "tests-modified": [
+        "guitest/gui_scaffold_tests.py — updated widget checklist for new Treeview and menu widgets"
+      ],
+      "architectural-decisions": [
+        "Forth-style stack data flow via mem.S — functions leave results on stack for next pipeline step",
+        "No global keyword — scalar module state kept in g dicts (e.g. g = {\"next_entity_id\": 1})",
+        "Duplicate inbox handling: remove old ECS entity then create new (channels may change, breaking topology)",
+        "Thin orchestrator pattern: startup.py sequences calls, domain logic stays in domain modules",
+        "No reset on app close — forensics may be needed",
+        "Castle-gate validation at system boundaries, trust interior data"
+      ],
+      "test-results": "All 79 pure-logic tests and 9 GUI tests passing"
+    }
+  }
+}
