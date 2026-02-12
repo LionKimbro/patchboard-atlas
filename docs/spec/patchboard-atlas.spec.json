@@ -178,6 +178,21 @@
         "idx_": "Maintained indices derived from ECS or external data.",
         "loaded_": "Externally sourced cached data."
       },
+      "log": {
+        "defined-in": {
+          "module": "log.py",
+          "name": "g_log"
+        },
+        "type": "list[log_record]",
+        "description": "Append-only structured log buffer for runtime and startup validation events. Rendered by the Console window when opened.",
+        "record-format": {
+          "timestamp": "str (UTC ISO8601)",
+          "level": "str (info | warning | error)",
+          "category": "str",
+          "message": "str",
+          "context": "dict[str -> any]"
+        }
+      },
       "globals": {
         "g['next_entity_id']": {
           "defined-in": {
@@ -195,7 +210,7 @@
             "name": "cmp_entities"
           },
           "type": "set[int]",
-          "description": "Set of active ECS IDs."
+          "description": "Set of active ECS IDs representing all known entities in the Atlas identity layer. Component instances are one class of entity; future entity types may exist without cmp_card_ref. Each ECS ID present in cmp_card_ref must also be present in this set."
         },
         "cmp_spatial": {
           "defined-in": {
@@ -210,7 +225,7 @@
             "width": "int -- width in world pixels",
             "height": "int -- height in world pixels"
           },
-          "notes": "World coordinates are integer pixel units before camera transform."
+          "notes": "World coordinates are integer pixel units before camera transform.\nPresence in cmp_spatial indicates spatial placement on the canvas. Entities without cmp_spatial entries exist but are not visually placed."
         },
         "cmp_card_ref": {
           "defined-in": {
@@ -218,7 +233,7 @@
             "name": "cmp_card_ref"
           },
           "type": "dict[int -> component_id_card]",
-          "description": "Maps ECS IDs to their associated Component ID Card objects. Each entry represents a placed component instance in the ECS world. The referenced Component ID Card supplies title, channels, inbox, and outbox data. The component_id_card value must be one of the objects contained in loaded_component_id_cards; no duplication of card data is permitted within the ECS."
+          "description": "Maps ECS IDs to their associated Component ID Card objects. Each entry represents a known component instance in the ECS identity layer, regardless of spatial placement. The referenced Component ID Card supplies title, channels, inbox, and outbox data. The component_id_card value must be one of the objects contained in loaded_component_id_cards; no duplication of card data is permitted within the ECS. If the referenced Component ID Card is invalidated during startup validation, the ECS entity must be removed immediately."
         }
       },
       "reverse-indices": {
@@ -229,7 +244,7 @@
           },
           "type": "dict[str -> int]",
           "description": "Maps canonical folder paths to ECS IDs.",
-          "notes": "Derived from component configuration; not part of ECS."
+          "notes": "Derived from component configuration; not part of ECS.  Rebuilt whenever cmp_entities or cmp_card_ref changes."
         }
       },
       "external-caches": {
@@ -254,8 +269,8 @@
             "name": "loaded_component_id_cards"
           },
           "type": "dict[str -> component_id_card]",
-          "description": "Cached Component ID Cards describing currently running FileTalk components.",
           "key": "str -- canonical absolute inbox path used as primary key",
+          "description": "Disk-backed cache of imported Component ID Cards. Serves as the persistence layer and startup source for creating ECS entities. Cards may exist even if the corresponding component process is not currently running.",
           "record-format": {
             "schema_version": "int",
             "title": "str",
@@ -266,7 +281,13 @@
             "inbox": "str (canonical absolute path)",
             "outbox": "str (canonical absolute path)"
           },
-          "notes": "Loaded from external sources (e.g., filesystem or service registry). Represents live component instances only. Cache is replaced wholesale on refresh."
+          "lifecycle": [
+            "Populated at startup by loading persisted JSON files.",
+            "Updated when user imports new cards.",
+            "If runtime validation fails (missing inbox/outbox folders), the card is deleted from disk and removed from this cache.",
+            "ECS entities are created from this cache but form a separate identity layer."
+          ],
+          "notes": "This structure is the persistence/cache layer only. ECS identity is maintained separately in cmp_entities and cmp_card_ref."
         }
       },
       "camera": {
@@ -304,7 +325,7 @@
         "Atlas responds by re-reading published router state",
         "Visual state converges toward authoritative truth"
       ],
-      "notes": "Temporary visual divergence (e.g., pending wires) is considered a feature, not a failure."
+      "notes": "Temporary visual divergence (e.g., pending wires) is considered a feature, not a failure.  A component may participate in routing topology even if it has no spatial placement (i.e. no cmp_spatial definition). Such components exist in ECS but are not rendered on the canvas."
     },
     "testing-strategy": {
       "purpose": "Defines the testing posture for Patchboard Atlas.",
