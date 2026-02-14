@@ -1,0 +1,159 @@
+{
+  "document": {
+    "document_id": "patchboard-atlas.rendering-system",
+    "title": "Patchboard Rendering System Outline & Initial Onboarding",
+    "purpose": "Define the architectural rendering model for Patchboard Atlas Phase 1, including World state, Render Intent, Canvas Substrate, placement mechanics, execution frame, and governing principles. Wires are intentionally excluded from Phase 1 to preserve focus and architectural clarity.",
+    "source": "https://chatgpt.com/c/69817e93-df78-8331-846e-2d95e7dfab7f"
+  },
+  "architecture": {
+    "world_layer": {
+      "role": "Authoritative state of Patchboard Atlas.",
+      "stores": {
+        "cmp_entities": "set[int] -- all ECS entity IDs",
+        "cmp_card_ref": "dict[int -> component_id_card]",
+        "cmp_spatial": "dict[int -> {x:int, y:int}] -- world-space anchor position"
+      },
+      "properties": [
+        "All geometry is stored in world coordinates.",
+        "World layer knows nothing about canvas objects.",
+        "World layer persists independently of rendering.",
+        "Spatial presence is defined only by membership in cmp_spatial."
+      ]
+    },
+    "render_intent_layer": {
+      "role": "Declarative specification of what should appear visually during the current frame.",
+      "store": "RENDER: dict[element_key -> element_descriptor]",
+      "properties": [
+        "RENDER is cleared and rebuilt on every sync_all().",
+        "Rules write only to RENDER.",
+        "RENDER contains no Tk canvas item IDs.",
+        "RENDER describes existence, world-space geometry, and style."
+      ]
+    },
+    "canvas_substrate_layer": {
+      "role": "Tkinter Canvas retained-mode platform.",
+      "properties": [
+        "Canvas items are created, updated, or deleted during flush_to_canvas().",
+        "Canvas items are tagged using element_key-derived tags.",
+        "Canvas item IDs are opaque handles and not treated as identity.",
+        "Application logic never reads canvas state as truth."
+      ]
+    }
+  },
+  "rules_system": {
+    "description": "Ordered rule functions compute render intent from world state.",
+    "execution": "For each visible entity, RULES execute in fixed order. Later rules override earlier ones.",
+    "invariants": [
+      "Rules read world state only.",
+      "Rules write only to RENDER.",
+      "Rules are stateless between frames.",
+      "Visual priority is determined by rule order."
+    ]
+  },
+  "element_keys": {
+    "definition": "An element_key uniquely identifies a visual element for reconciliation.",
+    "structure_example": [
+      "('entity', eid, 'perimeter')",
+      "('entity', eid, 'title')",
+      "('entity', eid, 'channel-in', channel_name)",
+      "('entity', eid, 'channel-out', channel_name)"
+    ],
+    "tagging_strategy": {
+      "grouping_tag": "entity|<eid>",
+      "kind_tag": "kind|component",
+      "element_tag": "ek|<serialized_element_key>",
+      "notes": "Canvas tags allow reconciliation without storing canvas item IDs."
+    }
+  },
+  "placement_mechanics": {
+    "description": "Placing a component creates spatial presence.",
+    "flow": [
+      "User selects component in tree.",
+      "User clicks canvas.",
+      "load_pt('event')",
+      "project_to('w')",
+      "cmp_spatial[eid] = {x: world_x, y: world_y}",
+      "sync_all()"
+    ],
+    "properties": [
+      "Components without cmp_spatial are not visible.",
+      "Spatial placement does not modify identity.",
+      "Placement is idempotent.",
+      "If the component has already been placed, clicking on the canvas doesn't cause a placement."
+    ]
+  },
+  "execution_frame": {
+    "entry_point": "sync_all()",
+    "definition": [
+      "sync_all()",
+      "  -> rebuild_render_intent()",
+      "  -> flush_to_canvas()"
+    ],
+    "rebuild_render_intent": {
+      "steps": [
+        "RENDER.clear()",
+        "For each eid in cmp_entities:",
+        "  if eid not in cmp_spatial: continue",
+        "  apply_rules_for_entity(eid)"
+      ],
+      "notes": "Full rebuild is intentional. No incremental dirty tracking in Phase 1."
+    },
+    "flush_to_canvas": {
+      "algorithm": [
+        "declared = set(RENDER.keys())",
+        "existing = collect_existing_element_keys()",
+        "for ek in declared:",
+        "  create_or_update(ek, RENDER[ek])",
+        "for ek in existing - declared:",
+        "  delete_element(ek)"
+      ],
+      "properties": [
+        "No direct canvas manipulation occurs outside this function.",
+        "Deletion is implicit via set difference.",
+        "Platform objects are reconciled rather than manually lifecycle-managed."
+      ]
+    }
+  },
+  "parameter_reduction_strategy": {
+    "name": "Stack-Oriented Context Retention",
+    "purpose": "Reduce repetitive parameter passing in deeply layered rendering and rule execution logic.",
+    "description": [
+      "When a value is repeatedly passed through many functions, it should instead be pushed onto the shared stack S and left there while in active use.",
+      "If the stack becomes overburdened or multiple contextual values must coexist, the value may be stored in the shared dictionary mem.",
+      "The stack S is manipulated using push() and pop().",
+      "The mem dictionary serves as secondary scoped storage for contextual data.",
+      "This strategy is intended to simplify call signatures and reduce cognitive overhead in dataflow-heavy operations."
+    ],
+    "constraints": [
+      "World state remains authoritative.",
+      "Stack and mem are contextual execution aids only.",
+      "No persistent data should rely on stack or mem."
+    ]
+  },
+  "development_strategy": {
+    "phase_1_goal": "Implement the full execution frame with a minimal visual feature.",
+    "initial_feature": [
+      "Single rule: entity perimeter rectangle.",
+      "Single element type: rectangle.",
+      "Render rectangle centered at cmp_spatial[eid].",
+      "Verify placement and re-render correctness via sync_all()."
+    ],
+    "excluded_in_phase_1": [
+      "Wires",
+      "Channel connection geometry",
+      "Advanced styling",
+      "Incremental diffing optimizations"
+    ],
+    "principle": "Establish execution-frame correctness before layering complexity."
+  },
+  "governing_principles": [
+    "World is source of truth.",
+    "Render Intent is pure declaration.",
+    "Canvas is reconciled substrate.",
+    "Data flows in one direction.",
+    "Full rebuild per frame in Phase 1.",
+    "Implicit deletion via set difference.",
+    "Element keys define visual identity.",
+    "Execution context should minimize parameter noise."
+  ]
+}

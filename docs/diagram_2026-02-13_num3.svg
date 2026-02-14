@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   sodipodi:docname="diagram_2026-02-13_num3.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#999999"
+     borderopacity="1"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.73851712"
+     inkscape:cx="334.454"
+     inkscape:cy="526.73119"
+     inkscape:window-width="1150"
+     inkscape:window-height="1000"
+     inkscape:window-x="-7"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <text
+       xml:space="preserve"
+       style="font-size:6.35px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:0.264583"
+       x="20.181938"
+       y="43.078957"
+       id="text1-7-7-7"><tspan
+         sodipodi:role="line"
+         id="tspan1-7-2-5"
+         style="font-size:6.35px;stroke-width:0.264583"
+         x="20.181938"
+         y="43.078957">Execution Frame</tspan></text>
+    <g
+       id="layer1-0">
+      <text
+         xml:space="preserve"
+         style="font-size:3.175px;text-align:end;writing-mode:lr-tb;direction:ltr;text-anchor:end;fill:#000000;stroke-width:0.264583"
+         x="197.00035"
+         y="17.56175"
+         id="text1-8-6"><tspan
+           sodipodi:role="line"
+           style="text-align:end;text-anchor:end;stroke-width:0.264583"
+           x="197.00035"
+           y="17.56175"
+           id="tspan22-8">title: (Feature Development) pg3</tspan><tspan
+           sodipodi:role="line"
+           style="text-align:end;text-anchor:end;stroke-width:0.264583"
+           x="197.00035"
+           y="21.5305"
+           id="tspan7">written: 2026-02-13</tspan><tspan
+           sodipodi:role="line"
+           style="text-align:end;text-anchor:end;stroke-width:0.264583"
+           x="197.00035"
+           y="25.49925"
+           id="tspan26">chat-gpt: https://chatgpt.comc/69817e93-df78-8331-846e-2d95e7dfab7f</tspan></text>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:0.264583"
+       x="36.114498"
+       y="52.37508"
+       id="text1-8-96"><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="36.114498"
+         y="52.37508"
+         id="tspan49">sync_all()</tspan></text>
+    <g
+       id="layer1-8"
+       transform="translate(0,-26.458334)">
+      <text
+         xml:space="preserve"
+         style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:0.264583"
+         x="36.114498"
+         y="89.41674"
+         id="text1-8-96-4"><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="89.41674"
+           id="tspan6-5">def sync_all():</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="93.38549"
+           id="tspan12">    rebuild_render_intent()</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="97.35424"
+           id="tspan49-9">    flush_to_canvas()</tspan></text>
+    </g>
+    <g
+       id="layer1-8-0"
+       transform="translate(0,51.329168)">
+      <text
+         xml:space="preserve"
+         style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:0.264583"
+         x="36.114498"
+         y="89.41674"
+         id="text1-8-96-4-1"><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="89.41674"
+           id="tspan49-9-0">def flush_to_canvas():</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="93.38549"
+           id="tspan36">    declared_keys = set(RENDER.keys())</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="97.35424"
+           id="tspan37">    existing_keys = collect_existing_element_keys()</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="101.32299"
+           id="tspan38" /><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="105.29174"
+           id="tspan39">    # Create or update</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="109.26049"
+           id="tspan40">    for ek in declared_keys:</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="113.22924"
+           id="tspan41">        create_or_update(ek)</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="117.19799"
+           id="tspan42" /><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="121.16674"
+           id="tspan43">    # Delete anything not declared</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="125.13549"
+           id="tspan44">    for ek in existing_keys - declared_keys:</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="129.10423"
+           id="tspan45">        delete_element(ek)</tspan></text>
+    </g>
+    <g
+       id="layer1-8-7"
+       transform="translate(0,-10.054166)">
+      <text
+         xml:space="preserve"
+         style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:0.264583"
+         x="36.114498"
+         y="89.41674"
+         id="text1-8-96-4-4"><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="89.41674"
+           id="tspan6-5-5">def rebuild_render_intent():</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="93.38549"
+           id="tspan49-9-9">    RENDER.clear()</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="97.35424"
+           id="tspan24">    </tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="101.32299"
+           id="tspan25">    for eid in cmp_spatial:</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="105.29174"
+           id="tspan27">        iterate(eid)</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="109.26049"
+           id="tspan28">        apply_rules()</tspan></text>
+    </g>
+    <g
+       id="layer1-8-7-2"
+       transform="translate(0,20.637507)">
+      <text
+         xml:space="preserve"
+         style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:0.264583"
+         x="36.114498"
+         y="89.41674"
+         id="text1-8-96-4-4-3"><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="89.41674"
+           id="tspan6-5-5-6">def apply_rules():</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="93.38549"
+           id="tspan49-9-9-7">    for rule in RULES:</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="97.35424"
+           id="tspan28-4">        rule()</tspan></text>
+    </g>
+    <g
+       id="layer1-8-7-2-1"
+       transform="translate(0,37.570851)">
+      <text
+         xml:space="preserve"
+         style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:0.264583"
+         x="36.114498"
+         y="89.41674"
+         id="text1-8-96-4-4-3-1"><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="89.41674"
+           id="tspan28-4-3">Rules write:</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="36.114498"
+           y="93.38549"
+           id="tspan34">* render_intent[element_key] = descriptor</tspan></text>
+    </g>
+    <path
+       style="font-variation-settings:normal;vector-effect:none;fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;-inkscape-stroke:none;stop-color:#000000"
+       d="m 64.746242,93.370846 32.253361,5.747235"
+       id="path32-5"
+       sodipodi:nodetypes="cc" />
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:0.264583"
+       x="97.952072"
+       y="100.01694"
+       id="text1-8-96-93-3-0-5"><tspan
+         sodipodi:role="line"
+         style="font-style:italic;stroke-width:0.264583"
+         x="97.952072"
+         y="100.01694"
+         id="tspan98">Iterate sets global register for the current eid,</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:italic;stroke-width:0.264583"
+         x="97.952072"
+         y="103.98569"
+         id="tspan47">and populates frequently looked up information</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:italic;stroke-width:0.264583"
+         x="97.952072"
+         y="107.95444"
+         id="tspan46">into other registers.</tspan></text>
+  </g>
+</svg>

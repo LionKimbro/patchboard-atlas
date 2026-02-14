@@ -1,0 +1,134 @@
+{
+  "document": {
+    "document_id": "patchboard-atlas.rendering-system.wires.addendum.v0.1",
+    "title": "Patchboard Rendering System – Wire Model Addendum",
+    "purpose": "Define how logical wires will be represented in the world model and rendered through the same declarative rendering pipeline as components, without introducing imperative canvas coupling.",
+    "status": "future-phase",
+    "source": "https://chatgpt.com/c/69817e93-df78-8331-846e-2d95e7dfab7f"
+  },
+  "overview": {
+    "summary": "Wires are logical connections between two component endpoints. They are first-class world entities and participate in the same World → Render Intent → Canvas flush pipeline as components. No wire is drawn directly by event handlers. All drawing flows through sync_all().",
+    "non-goal-in-phase-1": "Wire rendering is not required for the initial component placement implementation."
+  },
+  "world-layer": {
+    "identity": {
+      "cmp_wires": {
+        "type": "dict[wire_id -> wire_record]",
+        "description": "Authoritative logical wire records. Each wire is defined by endpoints, not by visual geometry."
+      }
+    },
+    "wire_id_definition": {
+      "type": "tuple",
+      "fields": [
+        "source_inbox (str)",
+        "source_channel (str)",
+        "dest_channel (str)",
+        "dest_inbox (str)"
+      ],
+      "description": "The logical identity of a wire is derived from the fully qualified endpoint pair. The wire_id must uniquely represent the connection."
+    },
+    "wire_record": {
+      "fields": {
+        "wire_id": "tuple",
+        "style_ref": "optional style reference key",
+        "metadata": "optional future extension"
+      },
+      "description": "Logical connection only. No coordinates stored here."
+    },
+    "cmp_wire_style": {
+      "type": "dict[wire_id -> style_record]",
+      "description": "Optional override layer allowing user customization of wire appearance.",
+      "style_record": {
+        "color": "str",
+        "width": "int",
+        "routing_mode": "enum: straight | orthogonal | curved",
+        "manual_offsets": "optional control-point overrides"
+      }
+    }
+  },
+  "render-intent-layer": {
+    "principle": "Wire geometry is computed from component spatial positions and channel layout rules. Wires do not store geometry in world state.",
+    "element-key-pattern": {
+      "format": [
+        "wire",
+        "wire_id",
+        "segment"
+      ],
+      "example": [
+        "wire",
+        "(A, out1, in1, B)",
+        "body"
+      ]
+    },
+    "render_descriptor_fields": {
+      "type": "line",
+      "world_coords": "[x0, y0, x1, y1] or polyline",
+      "style": "color, width, dash, etc.",
+      "shouldexist": "boolean"
+    },
+    "geometry_source": [
+      "cmp_spatial[eid] of source component",
+      "cmp_spatial[eid] of destination component",
+      "channel layout computation rules"
+    ]
+  },
+  "render-pipeline-integration": {
+    "sync_all_extension": [
+      "Clear render intent",
+      "Emit component render intent (Phase 1)",
+      "Emit wire render intent (Phase 2)",
+      "Flush render intent to canvas",
+      "Implicit orphan cleanup"
+    ],
+    "wire-emission-step": {
+      "description": "For each wire in cmp_wires, compute endpoints from component world positions and channel layout. Emit render intent entries using element keys."
+    },
+    "important-property": "Wires never manipulate canvas objects directly. They only emit render intent."
+  },
+  "channel-anchor-computation": {
+    "description": "Each component has fixed channel anchor positions derived from layout rules. Anchor coordinates are computed during render-intent emission.",
+    "inputs": [
+      "component world position (cmp_spatial)",
+      "component layout algorithm",
+      "channel index within its group (in/out)"
+    ],
+    "output": "world-space point for that channel endpoint"
+  },
+  "event-model-preview": {
+    "future-drag-connection-flow": [
+      "User mousedown on output channel anchor",
+      "Temporary ephemeral wire stored in drag state",
+      "Mousemove updates temporary wire render intent",
+      "Mouseup over valid input channel",
+      "Create wire record in cmp_wires",
+      "sync_all()"
+    ],
+    "temporary-wire": "Ephemeral, not stored in cmp_wires. Exists only during drag."
+  },
+  "deletion-model": {
+    "description": "Deleting a wire removes its entry from cmp_wires. No canvas deletion logic is required; orphan cleanup handles removal."
+  },
+  "styling-strategy": {
+    "priority-order": [
+      "default wire style",
+      "system highlight override",
+      "selection override",
+      "cmp_wire_style override"
+    ],
+    "mechanism": "Later render-intent rules override earlier style fields."
+  },
+  "principles": [
+    "Wires are logical first, visual second.",
+    "Geometry is derived, never stored.",
+    "Deletion is implicit through render reconciliation.",
+    "Event handlers modify world state only.",
+    "Wire rendering composes cleanly with the existing render pipeline."
+  ],
+  "development-plan": {
+    "phase-1": "Ignore wires entirely.",
+    "phase-2": "Introduce cmp_wires without rendering.",
+    "phase-3": "Emit straight-line wires between channel anchors.",
+    "phase-4": "Introduce style overrides and routing modes.",
+    "phase-5": "Optional manual control points."
+  }
+}

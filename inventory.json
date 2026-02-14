@@ -18,6 +18,24 @@
       "title": "Component ID Card Ingestion & Tree Projection",
       "purpose": "This document represents modeling and steps for the purpose of implementing ingestion of Component ID Cards, creation of ECS entities for each card, persistence to/from disk, and projection of all known component entries into the Tree pane in the Tree pane. This feature does not create spatial placements. Spatial placement is not required for existence."
     },
+    "patchboard-atlas.coordinates-machine-desc": {
+      "document_id": "patchboard-atlas.coordinates-machine-desc",
+      "filepath": "docs/spec/coordinates-machine-desc.json",
+      "title": "Coordinate Machine (coord_machine.py)",
+      "purpose": "Describes the coordinate machine: its registers, coordinate systems, projection formulas, functions, and usage patterns. Intended as a quick-reference so that an LLM or developer can understand the coord_machine module without reading the source."
+    },
+    "patchboard-atlas.rendering-system": {
+      "document_id": "patchboard-atlas.rendering-system",
+      "filepath": "F:/lion/github/patchboard-atlas/docs/spec/rendering-system.json",
+      "title": "Patchboard Rendering System Outline & Initial Onboarding",
+      "purpose": "Define the architectural rendering model for Patchboard Atlas Phase 1, including World state, Render Intent, Canvas Substrate, placement mechanics, execution frame, and governing principles. Wires are intentionally excluded from Phase 1 to preserve focus and architectural clarity."
+    },
+    "patchboard-atlas.rendering-system.wires.addendum.v0.1": {
+      "document_id": "patchboard-atlas.rendering-system.wires.addendum.v0.1",
+      "filepath": "F:/lion/github/patchboard-atlas/docs/spec/rendering-system-wires-addendum.json",
+      "title": "Patchboard Rendering System – Wire Model Addendum",
+      "purpose": "Define how logical wires will be represented in the world model and rendered through the same declarative rendering pipeline as components, without introducing imperative canvas coupling."
+    },
     "lionscliapp.api.v1": {
       "document_id": "lionscliapp.api.v1",
       "filepath": "F:/lion/github/lionscliapp/doc/lionscliapp_api.json",

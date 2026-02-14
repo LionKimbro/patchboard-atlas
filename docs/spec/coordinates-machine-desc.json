@@ -1,0 +1,179 @@
+{
+  "document": {
+    "document_id": "patchboard-atlas.coordinates-machine-desc",
+    "title": "Coordinate Machine (coord_machine.py)",
+    "purpose": "Describes the coordinate machine: its registers, coordinate systems, projection formulas, functions, and usage patterns. Intended as a quick-reference so that an LLM or developer can understand the coord_machine module without reading the source."
+  },
+  "summary": "A procedural, global-state, register-based coordinate machine for transforming points and rectangles between world space and canvas space. Uses mutable global dicts as registers, with a stack for save/restore. All operations are side-effecting; there is no OOP -- you load values into registers, operate on them, then store them back.",
+
+  "coordinate_systems": {
+    "w": {
+      "name": "world",
+      "description": "Absolute position in the infinite 2D world plane. This is the canonical coordinate system for stored entity data (attachments, labels, etc.)."
+    },
+    "c": {
+      "name": "canvas",
+      "description": "Pixel position on the visible canvas/viewport. Derived from world coords via camera offset, zoom, and viewport centering."
+    }
+  },
+
+  "projection_formula": {
+    "world_to_canvas": "canvas = ((world - cam) * zoom_num) // zoom_den + viewport_center",
+    "canvas_to_world": "world = ((canvas - viewport_center) * zoom_den) // zoom_num + cam",
+    "notes": "All math is integer (floor division). Zoom is a rational number (zoom_num / zoom_den) to stay in integer land."
+  },
+
+  "registers": {
+    "g_coord": {
+      "description": "Primary working registers. Holds both a point (x, y) and a rect (x0, y0, x1, y1), plus a coord-type tag ('w' or 'c') tracking which space the values are currently in.",
+      "fields": {
+        "x, y": "Point registers",
+        "x0, y0, x1, y1": "Rectangle registers (top-left to bottom-right)",
+        "coord-type": "'w' (world) or 'c' (canvas) -- tracks current coordinate space"
+      }
+    },
+    "g_cam": {
+      "description": "Camera position and zoom. The camera (x, y) is the world-space point that maps to the center of the viewport.",
+      "fields": {
+        "x, y": "Camera position in world coords",
+        "zoom-num, zoom-den": "Zoom as integer fraction (numerator / denominator)"
+      }
+    },
+    "g_view": {
+      "description": "Viewport dimensions in pixels.",
+      "fields": {
+        "canvas-view-w": "Viewport width in pixels",
+        "canvas-view-h": "Viewport height in pixels"
+      }
+    },
+    "g_attachment": {
+      "description": "External data slot for an attachment bounding box. Used as a source/destination for load_rect/store_rect.",
+      "fields": {
+        "bbox": "(x0, y0, x1, y1) tuple in world coords"
+      }
+    },
+    "g_label": {
+      "description": "External data slot for a label position.",
+      "fields": {
+        "coord": "(x, y) tuple in world coords"
+      }
+    },
+    "g_event": {
+      "description": "External data slot for a UI event position (mouse click, etc.).",
+      "fields": {
+        "x, y": "Event position in canvas coords"
+      }
+    },
+    "S": {
+      "description": "Value stack (list). Used by push_pt/pop_pt and push_rect/pop_rect for save/restore of register state."
+    }
+  },
+
+  "functions": {
+    "setup": {
+      "coord_reset_state()": "Zeros all registers, resets coord-type to 'w', clears the stack.",
+      "set_zoom(zoom_num, zoom_den)": "Sets the camera zoom ratio (integer fraction).",
+      "set_viewport(canvas_view_w, canvas_view_h)": "Sets the canvas viewport pixel size.",
+      "set_xy(x, y)": "Directly sets the point registers (x, y)."
+    },
+
+    "load_store": {
+      "load_rect(src)": {
+        "description": "Copies an external bbox into the rect registers (x0, y0, x1, y1). Sets coord-type to 'w'.",
+        "sources": {
+          "attachment": "Reads from g_attachment['bbox']"
+        }
+      },
+      "store_rect(dst)": {
+        "description": "Copies rect registers back to an external bbox. Requires coord-type == 'w'.",
+        "destinations": {
+          "attachment": "Writes to g_attachment['bbox']"
+        }
+      },
+      "load_pt(src)": {
+        "description": "Loads a point into the point registers (x, y) from various sources.",
+        "sources": {
+          "event": "From g_event; sets coord-type to 'c'",
+          "center": "Midpoint of current rect registers",
+          "center-south": "Bottom-center of current rect (midpoint x, y1)",
+          "nw": "(x0, y0) of rect",
+          "ne": "(x1, y0) of rect",
+          "se": "(x1, y1) of rect",
+          "sw": "(x0, y1) of rect",
+          "label": "From g_label['coord']; sets coord-type to 'w'"
+        }
+      },
+      "store_pt(dst)": {
+        "description": "Writes point registers into a destination.",
+        "destinations": {
+          "center": "Translates the entire rect so its center aligns with the point (move-by-center)",
+          "nw": "Sets x0, y0",
+          "ne": "Sets x1, y0",
+          "se": "Sets x1, y1",
+          "sw": "Sets x0, y1",
+          "cam": "Sets camera position (g_cam x, y)"
+        }
+      }
+    },
+
+    "projection": {
+      "project_to(dst)": {
+        "description": "Transforms ALL registers (point and rect) between coordinate spaces. No-op if already in target space.",
+        "targets": {
+          "c": "World -> Canvas",
+          "w": "Canvas -> World"
+        },
+        "notes": "Updates coord-type tag after projection. Uses g_cam and g_view for the transform."
+      }
+    },
+
+    "geometry": {
+      "slide_pt(dx, dy)": "Translates point registers by (dx, dy) in current coord space.",
+      "slide_rect(dx, dy)": "Translates rect registers by (dx, dy) in current coord space.",
+      "explode_pt(size)": "Converts point (x, y) into a rect centered on that point: (x-size, y-size, x+size, y+size)."
+    },
+
+    "stack": {
+      "push_pt()": "Pushes (x, y, coord-type) onto the stack S.",
+      "pop_pt()": "Pops (x, y, coord-type) from stack S into point registers.",
+      "push_rect()": "Pushes (x0, y0, x1, y1, coord-type) onto the stack S.",
+      "pop_rect()": "Pops (x0, y0, x1, y1, coord-type) from stack S into rect registers."
+    },
+
+    "read": {
+      "get_xy()": "Returns (x, y) tuple from point registers.",
+      "get_xyxy()": "Returns (x0, y0, x1, y1) tuple from rect registers."
+    }
+  },
+
+  "usage_patterns": {
+    "hit_test_event_against_attachment": [
+      "1. Populate g_event with mouse coords, g_attachment with entity bbox",
+      "2. load_rect('attachment')        -- rect regs = bbox, coord-type = 'w'",
+      "3. project_to('c')               -- rect regs now in canvas space",
+      "4. load_pt('event')              -- point regs = mouse pos, coord-type = 'c'",
+      "5. Compare get_xy() against get_xyxy() for containment"
+    ],
+    "move_attachment_by_dragging": [
+      "1. load_rect('attachment')        -- load world bbox into rect regs",
+      "2. project_to('c')               -- convert to canvas",
+      "3. load_pt('event')              -- load mouse position",
+      "4. store_pt('center')            -- move rect so center = mouse",
+      "5. project_to('w')               -- convert back to world",
+      "6. store_rect('attachment')       -- write back to attachment data"
+    ],
+    "save_restore_with_stack": [
+      "1. push_rect()                   -- save current rect regs",
+      "2. ... do other work ...",
+      "3. pop_rect()                    -- restore rect regs"
+    ]
+  },
+
+  "design_notes": [
+    "Fully procedural: no classes, no return values from mutators, pure side effects on global dicts.",
+    "The coord-type tag prevents accidental mixing of world and canvas values -- store_rect enforces 'w'.",
+    "Zoom is a rational (num/den) to avoid floating point; all math uses integer floor division.",
+    "The stack is untyped (caller must match push/pop types), like a Forth-style data stack.",
+    "External data (attachment bbox, label coord, event pos) must be populated by the caller before load operations."
+  ]
+}

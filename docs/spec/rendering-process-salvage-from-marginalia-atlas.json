@@ -1,0 +1,397 @@
+{
+  "document": "Rendering Process Salvage from Marginalia Atlas",
+  "purpose": "Transfer the declarative rendering and reconciliation architecture to a new project",
+  "salvage_environment": {
+    "project_path": "F:\\lion\\github\\marginalia-atlas",
+    "source_file": "F:\\lion\\github\\marginalia-atlas\\src\\marginaliaatlas\\code.py",
+    "source_lines": 1478,
+    "language": "Python 3 / Tkinter",
+    "key_files": {
+      "main_source": "src/marginaliaatlas/code.py",
+      "entry_module": "src/marginaliaatlas/__main__.py",
+      "project_config": "pyproject.toml",
+      "notes": "notes.txt"
+    },
+    "line_references": {
+      "global_state": "10-52",
+      "render_state_schema": "55-111",
+      "CUR_register": "114-158",
+      "coordinates_machine": "161-463",
+      "rules_support": "465-485",
+      "widget_retrieval": "488-526",
+      "modifier_keys": "528-546",
+      "render_all": "553-653",
+      "system_helpers": "656-679",
+      "drag_geometry": "682-701",
+      "canvas_helpers": "718-751",
+      "rule_handles": "758-759",
+      "attachment_lifecycle": "762-825",
+      "selection_management": "828-862",
+      "rule_default_appearance": "884-902",
+      "rule_selected_highlight": "905-910",
+      "rule_system_highlight": "939-946",
+      "event_handlers": "949-1093",
+      "persistence": "1110-1190",
+      "pane_management": "1193-1249",
+      "text_rendering": "1251-1327",
+      "tree_population": "1330-1375",
+      "event_dispatch": "1378-1383",
+      "main_boot": "1386-1477"
+    }
+  },
+
+  "architecture_overview": {
+    "summary": "A three-layer declarative rendering system with rule-based reconciliation, a register-based coordinates machine, and orphan-collecting flush pass. The system separates world truth from render intent from platform objects, and uses ordered rules to compute visual state from data state each frame.",
+    "layers": [
+      {
+        "name": "World Model",
+        "role": "Source of truth for geometry and data",
+        "stores": {
+          "G_ATTACH": "note_id -> {bbox: (x0,y0,x1,y1), color: string}  -- world-space geometry",
+          "G_INV": "note_id -> inventory record (symbol, systems, roles, callers, etc.)",
+          "selection_set": "set of selected note_ids",
+          "g": "camera position (cam_x, cam_y), zoom (zoom_num/zoom_den), viewport dimensions, system_highlight, hover state"
+        },
+        "notes": "Nothing in this layer knows about canvas IDs or screen pixels. All geometry is in world coordinates. This is the only layer that persists to disk."
+      },
+      {
+        "name": "Render Intent",
+        "role": "Declarative description of what the canvas SHOULD look like",
+        "stores": {
+          "G_CANVAS": "note_id -> render descriptor with existence flags, appearance properties, label coordinates, and platform object IDs"
+        },
+        "notes": "Written to by rules. Read by the renderer. Contains both declarative intent (what should exist, what it should look like) and implementation handles (Tk canvas IDs). The rules only write the intent fields; the renderer manages the handle fields."
+      },
+      {
+        "name": "Platform Canvas",
+        "role": "Actual visual output (Tk canvas items)",
+        "notes": "Managed exclusively by render_all(). Created, updated, and deleted based on render intent. Never read by rules or world model code. Canvas item IDs are stored in G_CANVAS but treated as opaque handles."
+      }
+    ]
+  },
+
+  "rendering_pipeline": {
+    "summary": "Every state change flows through the same three-phase pipeline: apply rules to all notes, flush render intent to canvas, clean up orphans.",
+    "trigger": "Any event handler that modifies world state calls sync_all() when done",
+    "phases": [
+      {
+        "phase": 1,
+        "name": "Rules Application",
+        "entry_point": "foreach_note(apply_rules)",
+        "description": "For each note that has a G_CANVAS entry, set CUR register context, then run every rule in RULES order. Each rule reads from the world model (G_ATTACH, G_INV, selection_set, g) and writes ONLY to CUR['note_canvas_data'] (which is G_CANVAS[note_id]).",
+        "key_property": "Rules execute in a fixed, declared order. Later rules override earlier rules. This creates a layered priority system: defaults first, then conditional highlights, then selection state."
+      },
+      {
+        "phase": 2,
+        "name": "Render Flush",
+        "entry_point": "render_all()",
+        "description": "For each note in G_CANVAS, reconcile the declared intent with the actual Tk canvas. For each visual element (rect, label, handles): if shouldexist and no canvas ID exists, create one. If shouldexist and canvas ID exists, update coords and appearance. If not shouldexist and canvas ID exists, mark it as orphaned. Coordinates are projected from world space to canvas space using the coordinates machine during this phase.",
+        "key_property": "The renderer is the ONLY code that creates, positions, or deletes platform objects. It reads render intent and produces side effects. This is the flush boundary."
+      },
+      {
+        "phase": 3,
+        "name": "Orphan Cleanup",
+        "entry_point": "End of render_all()",
+        "description": "Before the flush begins, ALL existing Tk canvas items tagged 'rendered' are collected as orphan candidates. As each item is encountered and confirmed still-needed, it is removed from the candidate set. After the flush, anything remaining in the set is deleted from the canvas.",
+        "key_property": "Deletion is implicit. You never explicitly delete a visual element. You stop declaring that it should exist, and the orphan collector removes it. This prevents stale visuals and leaked platform objects."
+      }
+    ],
+    "sync_all_implementation": {
+      "code_equivalent": "foreach_note(apply_rules); render_all()",
+      "called_from": [
+        "toggle_selected()",
+        "clear_selection()",
+        "set_selected()",
+        "set_system_highlight()",
+        "on_canvas_motion() during drag",
+        "on_canvas_configure() on resize",
+        "attach_new_square()",
+        "load_attachments()"
+      ]
+    }
+  },
+
+  "rules_system": {
+    "summary": "An ordered list of functions that compute render intent from world state. Rules are pure readers of world state and pure writers of render intent. They compose by overwriting: later rules override properties set by earlier rules.",
+    "initialization": "initialize_rules_at_program_start() populates RULES list once at boot",
+    "rule_order": [
+      {
+        "index": 0,
+        "name": "rule_default_appearance",
+        "purpose": "Establish baseline visuals for every note",
+        "reads": ["G_ATTACH[note_id]['bbox']", "G_INV[note_id]['symbol']"],
+        "writes": ["rect_coords", "rect_outline='white'", "rect_width=1", "rect_fill='#88ccff'", "label_coord", "label_text", "label_color='white'"],
+        "strategy": "Every note starts identical. Differentiation comes from later rules."
+      },
+      {
+        "index": 1,
+        "name": "rule_system_highlight",
+        "purpose": "Visually mark notes belonging to the highlighted system",
+        "reads": ["g['system_highlight']", "CUR['note_systems']"],
+        "writes": ["rect_width=3", "rect_outline='red'"],
+        "strategy": "Conditional override. Only fires when a system is highlighted and this note belongs to it."
+      },
+      {
+        "index": 2,
+        "name": "rule_selected_highlight",
+        "purpose": "Visually mark selected notes",
+        "reads": ["selection_set"],
+        "writes": ["rect_outline='yellow'", "rect_width=3"],
+        "strategy": "Runs after system highlight, so selection always wins visually."
+      },
+      {
+        "index": 3,
+        "name": "rule_handles",
+        "purpose": "Show resize handles when exactly one note is selected",
+        "reads": ["selection_set"],
+        "writes": ["handles_shouldexist"],
+        "strategy": "Handles are impractical with multiple selections, so they only appear for single selection."
+      }
+    ],
+    "design_notes": {
+      "composability": "Rules override by last-write-wins on individual properties. rule_system_highlight sets rect_outline to red, but rule_selected_highlight overwrites it to yellow if the note is also selected. This is the intended priority mechanism.",
+      "extensibility": "Adding new visual behavior means writing a new rule function and appending it to RULES. No existing code needs modification.",
+      "statelessness": "Each rule reads only from the world model and writes only to render intent. Rules have no memory between frames. This makes the system predictable and easy to debug."
+    }
+  },
+
+  "coordinates_machine": {
+    "summary": "A register-based machine for coordinate transformations between world space and canvas (screen) space. It provides a small, composable vocabulary of operations that load, transform, and store geometric data through shared registers.",
+    "already_salvaged": true,
+    "brief_description_for_reference": {
+      "registers": {
+        "point": "CUR['x'], CUR['y'] -- a single 2D point",
+        "rect": "CUR['x0'], CUR['y0'], CUR['x1'], CUR['y1'] -- a bounding box",
+        "coord_type": "CUR['coord_type'] = 'w' | 'c' -- tracks which space the registers are in",
+        "invariant": "Point and rect registers are always in the same coordinate space"
+      },
+      "stack": "S = [] -- push/pop for saving and restoring register state",
+      "operations": {
+        "load_rect(src)": "Load bbox from world model into rect register ('attachment' -> G_ATTACH bbox, sets coord_type='w')",
+        "store_rect(dst)": "Write rect register back to world model (requires coord_type='w')",
+        "load_pt(src)": "Load point from various sources: 'event' (mouse, sets 'c'), 'center'/'nw'/'ne'/'se'/'sw' (from rect), 'center-south', 'label'",
+        "store_pt(dst)": "Write point back into rect register ('center' moves rect, corners resize rect)",
+        "project_to(dst)": "Transform ALL registers between 'w' and 'c' using camera + zoom + viewport",
+        "slide_pt(dx,dy)": "Translate point in current space",
+        "slide_rect(dx,dy)": "Translate rect in current space",
+        "explode_pt(size)": "Expand point to rect: (x-size, y-size, x+size, y+size)",
+        "push_pt/pop_pt": "Save/restore point + coord_type on stack",
+        "push_rect/pop_rect": "Save/restore rect + coord_type on stack",
+        "get_xy()": "Read point register as tuple",
+        "get_xyxy()": "Read rect register as tuple"
+      },
+      "projection_formula": {
+        "world_to_canvas": "screen_x = ((world_x - cam_x) * zoom_num) // zoom_den + viewport_center_x",
+        "canvas_to_world": "world_x = ((screen_x - viewport_center_x) * zoom_den) // zoom_num + cam_x",
+        "zoom": "Rational number (num/den) to avoid floating-point drift. Integer-only arithmetic.",
+        "viewport_center": "canvas_view_w // 2, canvas_view_h // 2"
+      }
+    },
+    "role_in_rendering": "The coordinates machine is used in two critical places: (1) in render_all(), to project world-space geometry to canvas-space for positioning Tk items; (2) in drag/interaction handlers, to convert mouse events (canvas space) into world-space modifications."
+  },
+
+  "CUR_register_and_iteration": {
+    "summary": "A single shared context register (CUR) that is set up before any per-note operation. This avoids passing note context through function parameters, enabling rules and operations to be written as simple parameterless functions.",
+    "fields": {
+      "note_id": "Currently iterated note ID",
+      "note_canvas_data": "G_CANVAS[note_id] -- render intent for this note",
+      "note_attachment_data": "G_ATTACH[note_id] -- world geometry for this note",
+      "note_inv": "G_INV[note_id] -- inventory record",
+      "note_systems": "List of system names this note belongs to",
+      "event": "Current Tk event (set by dispatch_event)",
+      "top": "Canvas item under mouse at event time",
+      "top_note_id": "note_id for the item under mouse"
+    },
+    "iteration_pattern": {
+      "iterate_note(note_id)": "Sets all note-related CUR fields for a specific note",
+      "foreach_note(fn)": "Calls iterate_note + fn() for every note in G_CANVAS",
+      "dispatch_event(event, handler_fn)": "Sets event-related CUR fields (event, top, top_note_id), then calls iterate_note + handler_fn()"
+    },
+    "design_rationale": "This is a deliberate register-machine pattern, not accidental global state. It eliminates parameter threading through deeply nested calls and makes the rule system possible: rules are just functions that read CUR and write to CUR['note_canvas_data']. The tradeoff is that CUR must always be set up correctly before use, which is enforced by iterate_note() and dispatch_event() being the only entry points."
+  },
+
+  "reconciliation_pattern": {
+    "summary": "The system reconciles declared intent with platform reality using a create-or-update pattern with orphan collection, similar to React's virtual DOM diffing but much simpler.",
+    "mechanism": {
+      "existence_flags": "Each visual element has a _shouldexist boolean (rect_shouldexist, label_shouldexist, handles_shouldexist). These are the declarative intent.",
+      "platform_handles": "Each visual element has a platform ID field (rect, label, handles[]). These are None when the element doesn't exist on canvas.",
+      "create": "If shouldexist=true and handle=None, create the platform object and store the ID",
+      "update": "If shouldexist=true and handle!=None, update the existing platform object's properties",
+      "implicit_delete": "If shouldexist=false (or the note no longer exists), the handle's platform object ends up in the orphan set and gets deleted",
+      "orphan_collection": "At the start of render_all(), ALL 'rendered'-tagged canvas items become orphan candidates. Each item that is still needed gets removed from the set. Survivors are deleted."
+    },
+    "why_this_works": "By collecting orphans before iterating and removing them during iteration, you get automatic cleanup of any platform object that is no longer referenced by any note's render intent. This handles deletion, re-creation, and state changes uniformly without explicit delete calls."
+  },
+
+  "event_dispatch_pattern": {
+    "summary": "All events flow through a single dispatch_event() function that normalizes Tk events into the CUR register before calling the actual handler. This creates a uniform context for all event processing.",
+    "flow": [
+      "Tk fires event callback",
+      "doit(handler_fn) wrapper calls dispatch_event(event, handler_fn)",
+      "dispatch_event sets CUR['event'], finds canvas item under mouse (CUR['top']), resolves its note_id (CUR['top_note_id']), calls iterate_note() to set full note context",
+      "handler_fn() executes with full context in CUR",
+      "handler_fn modifies world state, then calls sync_all() to re-render"
+    ],
+    "doit_wrapper": "A closure defined inside main() that converts any parameterless handler into a Tk-compatible lambda. This is the adapter between Tk's event system and the register-based dispatch model."
+  },
+
+  "drag_model": {
+    "summary": "A state machine tracking the current drag operation. Drag state is kept in a dedicated G_DRAG register that captures context at drag-start and is read during drag-motion.",
+    "modes": {
+      "note": "Dragging a note or its corner handle. Applies movement to all selected notes.",
+      "pan": "Dragging empty canvas. Moves the camera (world origin shifts opposite to mouse direction)."
+    },
+    "drag_flow": {
+      "start": "on_canvas_button_press -> start_drag(mode) captures mouse position, note_id, handle/corner info, updates selection",
+      "motion": "on_canvas_motion computes delta from last position, applies it via apply_drag (notes) or camera shift (pan), calls sync_all()",
+      "end": "on_canvas_button_release -> cancel_drag() clears G_DRAG"
+    },
+    "group_drag": "apply_drag iterates selection_set and applies the same delta to every selected note. For handle drags (resize), it moves the specific corner. For body drags, it translates the entire bbox. The coordinates machine (load_rect, slide_rect/slide_pt, store_rect) handles all the math.",
+    "note_on_coordinate_spaces_during_drag": "Mouse deltas are in canvas space. The drag applies them directly to world-space coordinates loaded through load_rect('attachment'). This works because the delta is computed frame-to-frame, not as an absolute offset. However, under zoom, this means drag distances in world space scale with zoom level -- moving 10 pixels on screen at 2x zoom moves 5 units in world space. This is handled implicitly by the per-frame delta approach."
+  },
+
+  "attachment_lifecycle": {
+    "summary": "Notes exist in the inventory (G_INV) but only become visible when they get an 'attachment' -- a spatial presence on the canvas.",
+    "creation": {
+      "trigger": "Click on empty canvas with exactly one unattached note selected in the tree",
+      "process": "Load mouse position as event (canvas space), project to world, explode point to 40x40 bbox, create G_ATTACH entry with bbox, create G_CANVAS entry with default render intent, sync_all()"
+    },
+    "deletion": {
+      "trigger": "Delete/Backspace key with notes selected",
+      "process": "For each selected note: deselect, cancel any active drag, delete G_CANVAS and G_ATTACH entries. Orphan collection in next render_all() cleans up platform objects."
+    },
+    "persistence": {
+      "save": "G_ATTACH entries serialized to JSON (bbox + color), plus layout metadata (_layout, _window)",
+      "load": "JSON deserialized back into G_ATTACH and fresh G_CANVAS entries created with default render intent, then sync_all(). Notes missing from inventory are silently skipped."
+    }
+  },
+
+  "selection_model": {
+    "summary": "A set-based multi-selection model where selection state drives visual appearance through rules.",
+    "state": "selection_set: a Python set of note_ids",
+    "operations": {
+      "set_selected()": "Clear set, add current note. Also clears system_highlight. Syncs tree and text views.",
+      "toggle_selected()": "Add or remove current note from set. Used with Ctrl-click.",
+      "clear_selection()": "Empty the set. Syncs tree and text views.",
+      "is_selected()": "Check if CUR note is in set",
+      "is_only_selected()": "Check if CUR note is the sole member",
+      "only_selected()": "Return the sole member, or None if 0 or >1"
+    },
+    "visual_effect": "rule_selected_highlight overrides outline to yellow and width to 3 for selected notes. rule_handles shows corner handles only when exactly one note is selected."
+  },
+
+  "strategies_and_principles": {
+    "summary": "The core techniques and why they work, written for transfer to a different project.",
+
+    "principles": [
+      {
+        "name": "Separation of truth from intent from platform",
+        "description": "World data (what exists and where), render intent (what should be drawn and how), and platform objects (actual canvas items) are kept in separate stores. Data flows in one direction: world -> intent -> platform. This eliminates feedback loops, makes debugging straightforward (you can inspect any layer independently), and makes it possible to swap the platform layer entirely.",
+        "transfer_notes": "In the new project, identify your equivalent of these three layers. The world model should know nothing about rendering. The render intent should be a plain data structure. The platform flush should be a single function that reads intent and produces side effects."
+      },
+      {
+        "name": "Rules as ordered overrides",
+        "description": "Visual state is computed by running a fixed sequence of rule functions. Each rule can read any world state and write any render-intent property. Later rules override earlier ones. This creates a natural priority system: base appearance, then conditional styling, then selection state. No rule needs to know about any other rule.",
+        "transfer_notes": "This pattern is especially effective when you have multiple independent conditions that affect the same visual properties (e.g., color can be affected by type, by membership in a group, and by selection state). Define the priority order once, and each rule only needs to know its own condition."
+      },
+      {
+        "name": "Implicit deletion via orphan collection",
+        "description": "Platform objects are never explicitly deleted by application code. Instead, the renderer collects all existing platform objects before each flush, marks each one as 'still needed' during the flush, and deletes whatever remains. This means deletion happens automatically when you remove an entity from the world model -- you don't need to remember to clean up its visual representation.",
+        "transfer_notes": "This is the most important reconciliation technique to transfer. It prevents leaked platform objects and eliminates an entire class of bugs where visuals get out of sync with data. The cost is tagging all platform objects so the collector can find them."
+      },
+      {
+        "name": "Register-based context (CUR pattern)",
+        "description": "Instead of passing context through function parameters, a shared register (CUR) is loaded before each operation and read during it. This enables rules and helpers to be simple parameterless functions while still having access to the full context of the note being processed.",
+        "transfer_notes": "This works well when you have many small functions that all operate on the same context (as in a rule system). The tradeoff is that you must be disciplined about when CUR is set up and that operations are not reentrant. For a single-threaded UI loop, this is fine."
+      },
+      {
+        "name": "Coordinates machine as abstraction boundary",
+        "description": "All coordinate math goes through a small vocabulary of register operations (load, store, project, slide, explode, push, pop). Application code never does raw coordinate arithmetic. This means the projection formula exists in exactly one place, zoom and camera logic cannot leak into handlers, and all coordinate operations are auditable.",
+        "transfer_notes": "Already salvaged to the new project. The key benefit is that when you need to change the projection (e.g., adding rotation, non-linear zoom, or multi-viewport support), you only change the machine, not every place that computes coordinates."
+      },
+      {
+        "name": "Event normalization through dispatch",
+        "description": "All events pass through dispatch_event() which resolves what's under the mouse, finds the corresponding note_id, and loads CUR context before calling the handler. Handlers never parse raw events. This means every handler starts with the same well-defined context regardless of how it was triggered.",
+        "transfer_notes": "In the new project, define what 'event context' means (what entity is targeted, what mode the system is in) and normalize all events into that context before dispatching to handlers. This eliminates redundant hit-testing and context-loading code in every handler."
+      },
+      {
+        "name": "Full re-render on every change",
+        "description": "Every state change triggers sync_all(), which recomputes ALL render intent from scratch and flushes the entire canvas. There is no incremental update or dirty tracking. This is dramatically simpler than incremental approaches and is correct by construction -- you cannot have stale render intent because it is always recomputed.",
+        "transfer_notes": "This works when the number of entities is manageable (hundreds, not millions). For the atlas use case with dozens to low hundreds of notes, full re-render is instantaneous. If the new project has more entities, you may need to add dirty tracking, but start with full re-render and only optimize if profiling shows it's necessary."
+      },
+      {
+        "name": "Platform objects as opaque handles",
+        "description": "Canvas item IDs are stored in render intent (G_CANVAS) but are never read by rules or world-model code. They exist only so the renderer can update or delete them. This means the entire platform layer (Tk, HTML Canvas, WebGL, etc.) could be swapped by rewriting only render_all().",
+        "transfer_notes": "When porting to a new platform, the render_all() function is the only thing that needs to change. The rules, world model, coordinates machine, and event handlers are platform-independent."
+      }
+    ],
+
+    "anti_patterns_avoided": [
+      {
+        "name": "Direct platform manipulation from event handlers",
+        "description": "Event handlers never call canvas.create_rectangle() or canvas.delete(). They only modify world state and call sync_all(). This prevents the platform getting out of sync with the data model."
+      },
+      {
+        "name": "Bidirectional data flow",
+        "description": "Data flows one way: world -> intent -> platform. The platform layer never writes back to render intent or world state. Mouse events go through dispatch_event and modify world state directly, not through the platform layer."
+      },
+      {
+        "name": "Explicit lifecycle management",
+        "description": "There is no 'create_visual_for_note()' / 'destroy_visual_for_note()' pair that must be called in matched sequence. Visuals are created implicitly when render_all() encounters a shouldexist=true with no platform handle, and destroyed implicitly by orphan collection."
+      }
+    ]
+  },
+
+  "complete_data_flow_example": {
+    "scenario": "User drags a note on the canvas",
+    "steps": [
+      {
+        "step": 1,
+        "trigger": "Tk fires <ButtonPress-1>",
+        "action": "doit(on_canvas_button_press) calls dispatch_event(event, on_canvas_button_press)",
+        "effect": "CUR loaded with event, top canvas item, top_note_id, full note context"
+      },
+      {
+        "step": 2,
+        "action": "on_canvas_button_press determines CUR['top'] exists, calls start_drag('note')",
+        "effect": "G_DRAG captures drag-start state: note_id, mouse position, handle/corner info. Selection updated (Ctrl=toggle, else=set_selected). sync_all() re-renders with selection highlight."
+      },
+      {
+        "step": 3,
+        "trigger": "Tk fires <B1-Motion> repeatedly",
+        "action": "on_canvas_motion computes dx,dy from G_DRAG position to current mouse position",
+        "effect": "apply_drag(dx,dy) called: for each note in selection_set, load_rect('attachment') loads world bbox, slide_rect(dx,dy) translates it, store_rect('attachment') writes it back. G_DRAG position updated to current mouse."
+      },
+      {
+        "step": 4,
+        "action": "sync_all() called after apply_drag",
+        "effect": "Phase 1: foreach_note(apply_rules) recomputes render intent for ALL notes. Phase 2: render_all() projects world coords to canvas space and updates Tk items. Phase 3: orphan cleanup (no-op if no notes were removed)."
+      },
+      {
+        "step": 5,
+        "trigger": "Tk fires <ButtonRelease-1>",
+        "action": "on_canvas_button_release calls cancel_drag()",
+        "effect": "G_DRAG cleared. Drag complete. World model reflects new position. No additional render needed."
+      }
+    ]
+  },
+
+  "glossary": {
+    "G_INV": "Global inventory. note_id -> inventory record. Loaded from marginalia JSON at boot. Read-only during normal operation.",
+    "G_ATTACH": "Global attachments. note_id -> {bbox, color}. World-space geometry. The source of truth for where things are.",
+    "G_CANVAS": "Global canvas state. note_id -> render descriptor. Declarative render intent plus platform object handles.",
+    "G_DRAG": "Global drag state. Captures context at drag-start, read during drag-motion.",
+    "G_PANES": "Global pane visibility. Which of the three panes (tree, canvas, text) are visible.",
+    "g": "Miscellaneous global state: camera position, zoom, viewport size, system highlight, hover state.",
+    "CUR": "Current context register. Set by iterate_note() or dispatch_event(). Read by rules, coordinates machine, and handlers.",
+    "S": "Stack for coordinates machine. Saves/restores register snapshots.",
+    "RULES": "Ordered list of rule functions. Populated at boot. Run in order for each note on every sync_all().",
+    "sync_all()": "The master reconciliation function. Recomputes all render intent and flushes to canvas.",
+    "render_all()": "The flush function. Reads render intent, manages platform objects, collects orphans.",
+    "iterate_note(note_id)": "Load CUR register with context for a specific note.",
+    "foreach_note(fn)": "Call fn() for each note in G_CANVAS, with CUR set appropriately.",
+    "dispatch_event(event, fn)": "Normalize a Tk event into CUR, resolve what's under the mouse, then call fn().",
+    "project_to(dst)": "Transform all coordinate registers between world and canvas space.",
+    "orphan": "A platform object (Tk canvas item) that is no longer referenced by any note's render intent. Collected and deleted at the end of each render pass."
+  }
+}

@@ -1,0 +1,435 @@
+{
+  "document": "Interaction Model Salvage from Marginalia Atlas",
+  "purpose": "Document how user interaction (dragging, creating, deleting, panning, selection) is received, processed, and translated into world-state commands, with attention to the register-based coding style and how interaction connects to the rendering process",
+  "companion_document": "rendering-process-salvage-from-marginalia-atlas.json",
+  "salvage_environment": {
+    "project_path": "F:\\lion\\github\\marginalia-atlas",
+    "source_file": "src/marginaliaatlas/code.py",
+    "key_sections": {
+      "event_dispatch": "lines 1378-1394",
+      "event_bindings": "lines 1399-1460",
+      "canvas_button_press": "line 1044",
+      "canvas_motion": "line 1051",
+      "canvas_button_release": "line 1081",
+      "canvas_hover": "line 984",
+      "canvas_configure": "line 1087",
+      "tree_select": "line 958",
+      "delete_key": "line 978",
+      "start_drag": "line 1007",
+      "apply_drag": "line 686",
+      "attach_new_square": "line 766",
+      "delete_attachment": "line 814",
+      "selection_functions": "lines 832-862",
+      "CUR_register": "lines 120-158",
+      "coordinates_machine": "lines 161-463",
+      "canvas_helpers": "lines 720-751",
+      "modifier_key_helpers": "lines 528-546",
+      "drag_state": "lines 16-23, 999-1042"
+    }
+  },
+
+  "event_reception": {
+    "summary": "All platform events pass through a single normalization layer (dispatch_event) before reaching any handler. The normalization resolves WHAT the user is pointing at and loads full context into the CUR register. Handlers never parse raw events.",
+
+    "the_doit_wrapper": {
+      "location": "Defined inside main(), line 1387",
+      "signature": "doit(fn) -> lambda e: dispatch_event(e, fn)",
+      "purpose": "Adapter between Tk's event model (callbacks receive an event object) and the system's model (handlers are parameterless functions that read CUR). Every Tk binding goes through doit.",
+      "what_it_does": "Wraps any parameterless handler function into a Tk-compatible callback. When Tk fires the event, doit calls dispatch_event with the raw event and the handler.",
+      "design_note": "doit is a closure inside main() because it needs access to nothing special -- it just connects the two calling conventions. It is intentionally minimal."
+    },
+
+    "dispatch_event": {
+      "location": "line 1378",
+      "code_shape": "dispatch_event(event, handler_fn): set CUR['event'], find canvas item under mouse, resolve note_id, load note context, call handler_fn()",
+      "steps": [
+        {
+          "step": "Store raw event",
+          "detail": "CUR['event'] = event. This makes the Tk event available to any code that needs mouse coordinates or modifier state, without passing it as a parameter."
+        },
+        {
+          "step": "Hit-test: what is under the mouse?",
+          "detail": "CUR['top'] = canvas_top(). Uses Tk's find_withtag('current') to get the topmost canvas item beneath the mouse pointer. Returns None if the mouse is over empty canvas."
+        },
+        {
+          "step": "Resolve: which note does that item belong to?",
+          "detail": "CUR['top_note_id'] = note_id_for_canvas_item(top). Searches G_CANVAS to find which note_id owns this canvas item (could be its rect, label, or one of its handles). Returns None if the item isn't part of any note."
+        },
+        {
+          "step": "Load full note context",
+          "detail": "iterate_note(note_id). Sets CUR['note_id'], CUR['note_canvas_data'], CUR['note_attachment_data'], CUR['note_inv'], CUR['note_systems']. If note_id is None, all these are set to None/empty."
+        },
+        {
+          "step": "Call handler",
+          "detail": "handler_fn(). The handler executes with the full resolved context in CUR. It never needs to do its own hit-testing or context lookup."
+        }
+      ],
+      "what_this_eliminates": "Without dispatch_event, every handler would need to: (1) get the mouse position from the event, (2) hit-test the canvas, (3) look up which note the item belongs to, (4) load that note's data. This is 4 lines of boilerplate per handler, and getting any of it wrong causes subtle bugs. dispatch_event does it once, correctly, for all handlers."
+    },
+
+    "hit_testing": {
+      "canvas_top": {
+        "location": "line 953",
+        "mechanism": "Tk maintains a 'current' tag on whichever canvas item is topmost under the mouse. canvas_top() calls find_withtag('current') and returns the first result or None.",
+        "note": "This is Tk doing the spatial hit-test for us. The system does not implement its own point-in-rect testing."
+      },
+      "note_id_for_canvas_item": {
+        "location": "line 735",
+        "mechanism": "Linear scan of G_CANVAS. For each note, checks if the canvas_item matches the note's rect, label, or any of its handles.",
+        "note": "This is O(n) in the number of notes. Acceptable for the scale of this application. A reverse-lookup map (canvas_item -> note_id) would be the optimization if needed."
+      },
+      "is_handle": {
+        "location": "line 720",
+        "mechanism": "Checks if 'handle' is in the Tk tags of the canvas item. Handles are created with tags ('handle', corner_name, 'rendered').",
+        "note": "Tags are the primary metadata system for canvas items. They serve double duty: 'rendered' for orphan collection, 'handle' + 'nw'/'ne'/'se'/'sw' for interaction classification."
+      },
+      "corner_for_handle": {
+        "location": "line 724",
+        "mechanism": "Reads the Tk tags of a handle item and returns whichever corner tag ('nw', 'ne', 'se', 'sw') it finds.",
+        "note": "This is how the system knows WHICH corner is being dragged. The corner identity is baked into the platform object's tags at creation time."
+      }
+    },
+
+    "modifier_keys": {
+      "location": "lines 528-546",
+      "mechanism": "keys_down(keycodes) reads CUR['event'].state (a bitmask from Tk) and checks for modifier flags. Codes: 'C'=Ctrl, 'S'=Shift, 'A'=Alt.",
+      "usage": "Called during start_drag to determine whether Ctrl is held. Ctrl+click on a note toggles its selection. Ctrl+click on empty canvas preserves current selection.",
+      "design_note": "The modifier check is a simple bitmask test. The string-based API ('C', 'S', 'A') is a convenience that avoids exposing platform-specific bitmask constants to handler code."
+    }
+  },
+
+  "the_button_press_decision": {
+    "summary": "on_canvas_button_press is the central routing point for all mouse-down events on the canvas. It makes a single decision: is this a creation, a note drag, or a pan? This one function determines the meaning of the click.",
+    "location": "line 1044",
+    "logic": {
+      "code_shape": "if (nothing under mouse) and (exactly one note selected in tree) and (that note has no attachment yet): create. else: start_drag('note' if clicked on a note, 'pan' if clicked on empty canvas)",
+      "condition_for_creation": {
+        "CUR_top_is_None": "Mouse is not over any canvas item (empty space)",
+        "only_selected_returns_a_note_id": "Exactly one note is selected (in the tree browser, not yet placed on canvas)",
+        "that_note_id_is_not_in_G_CANVAS": "The selected note does not already have a spatial attachment"
+      },
+      "condition_for_note_drag": "CUR['top_note_id'] is not None -- the mouse is over a note's visual element",
+      "condition_for_pan": "CUR['top_note_id'] is None -- the mouse is over empty canvas (and creation conditions weren't met)"
+    },
+    "design_note": "This is the only place where the system decides what a click MEANS. The decision tree is shallow (one if/else), which makes the interaction model easy to understand and modify. The creation path is gated by a very specific combination of conditions, so it only fires when the user clearly intends to place a note."
+  },
+
+  "drag_system": {
+    "summary": "Dragging is implemented as a state machine with three phases: start (capture context), motion (apply deltas), release (clear state). The drag state is stored in a dedicated G_DRAG register that persists across the motion events of a single drag gesture.",
+
+    "G_DRAG_register": {
+      "location": "lines 16-23",
+      "fields": {
+        "mode": "'note' | 'pan' | None -- what kind of drag is in progress",
+        "note_id": "Which note initiated the drag (for note mode)",
+        "x": "Last known mouse X in canvas space (for computing deltas)",
+        "y": "Last known mouse Y in canvas space",
+        "handle": "Canvas item ID of the handle being dragged, or None (for resize vs translate)",
+        "corner": "'nw' | 'ne' | 'se' | 'sw' | None -- which corner, derived from handle tags"
+      },
+      "design_note": "G_DRAG is a register, not an object. It is set at drag-start and read during drag-motion. It stores the CONTEXT of the drag (what was clicked, where) so that motion events can compute their effect without re-resolving what's being dragged. This is the same register pattern used by CUR, applied to a different lifecycle."
+    },
+
+    "start_drag": {
+      "location": "line 1007",
+      "purpose": "Capture the complete context of a drag gesture at the moment the mouse goes down",
+      "process_for_note_mode": [
+        "Clear any previous drag state",
+        "Record mode='note', starting mouse position from event",
+        "Record which note_id was clicked (from CUR['top_note_id'])",
+        "Record which canvas item was clicked (from CUR['top'])",
+        "Determine if it's a handle: if so, record the handle item and resolve the corner name",
+        "Update selection: if Ctrl held, toggle this note in/out of selection. If Ctrl not held and note not already selected, set it as the sole selection. If Ctrl not held and note already selected, leave selection unchanged (allows dragging a group without deselecting)."
+      ],
+      "process_for_pan_mode": [
+        "Clear any previous drag state",
+        "Record mode='pan', starting mouse position from event",
+        "If Ctrl not held, clear the selection (clicking empty canvas deselects)",
+        "If Ctrl held, preserve selection (Ctrl-click on empty canvas pans without deselecting)",
+        "Clear note_id, canvas_item, handle, corner (not applicable to pan)"
+      ],
+      "selection_interaction": "The selection update happens AT drag-start, not during motion or at release. This means the visual feedback (selection highlight, handles) appears immediately on mouse-down, before any dragging occurs. This feels responsive because the user sees the selection change instantly."
+    },
+
+    "on_canvas_motion": {
+      "location": "line 1051",
+      "purpose": "Apply the incremental mouse movement to the world model, then re-render",
+      "delta_computation": "dx = event.x - G_DRAG['x']; dy = event.y - G_DRAG['y']. These are canvas-space pixel deltas since the last motion event (or since drag-start for the first one).",
+      "pan_mode": {
+        "action": "Shift the camera position opposite to the mouse movement",
+        "formula": "g['cam_x'] -= dx * zoom_den // zoom_num; g['cam_y'] -= dy * zoom_den // zoom_num",
+        "why_opposite": "When you drag right, the world should scroll left (camera moves left). This gives the illusion of grabbing the canvas and pulling it.",
+        "zoom_compensation": "The delta is scaled by zoom_den/zoom_num to convert canvas-space pixels into world-space units. At 2x zoom, moving 10 pixels should move the camera 5 world units.",
+        "then": "Update G_DRAG['x','y'] to current position, call sync_all()"
+      },
+      "note_mode": {
+        "action": "Move all selected notes by the delta",
+        "guard": "If the dragged note no longer exists in G_CANVAS (it was deleted mid-drag somehow), cancel the drag and return",
+        "then_calls": "apply_drag(dx, dy), then sync_all(), then update G_DRAG['x','y']"
+      },
+      "frame_to_frame_deltas": "The system computes deltas between consecutive motion events, not between the start position and the current position. G_DRAG['x','y'] is updated after each motion event. This means each frame applies a small incremental change, which avoids accumulated floating-point error and makes the math simpler."
+    },
+
+    "apply_drag": {
+      "location": "line 686",
+      "purpose": "The core geometry operation: translate selected notes by a canvas-space delta",
+      "process": [
+        "For each note_id in selection_set:",
+        "  iterate_note(note_id)  -- set CUR context",
+        "  load_rect('attachment')  -- load world bbox into rect register, sets coord_type='w'",
+        "  if G_DRAG['handle']:  -- resize mode",
+        "    load_pt(corner)  -- load the specific corner point from rect register",
+        "    slide_pt(dx, dy)  -- translate that corner by the delta",
+        "    store_pt(corner)  -- write the moved corner back into rect register (resizes the rect)",
+        "  else:  -- translate mode",
+        "    slide_rect(dx, dy)  -- translate entire rect by the delta",
+        "  store_rect('attachment')  -- write rect register back to G_ATTACH (requires coord_type='w')"
+      ],
+      "register_usage_in_resize": {
+        "description": "Resizing uses the coordinates machine elegantly. load_pt('nw') extracts the NW corner from the rect register. slide_pt moves just that point. store_pt('nw') writes the point back into the rect register as its NW corner, which changes x0 and y0 while leaving x1 and y1 untouched. The rect register serves as both source and destination, with the point register as an intermediary.",
+        "sequence_for_dragging_NW_corner": "load_rect -> rect has (x0,y0,x1,y1). load_pt('nw') -> pt = (x0,y0). slide_pt(dx,dy) -> pt = (x0+dx, y0+dy). store_pt('nw') -> rect becomes (x0+dx, y0+dy, x1, y1). store_rect -> write back. The SE corner never moved."
+      },
+      "register_usage_in_translate": {
+        "description": "Translation is even simpler. slide_rect moves all four coordinates by the same delta. No point register involvement needed.",
+        "sequence": "load_rect -> slide_rect(dx,dy) -> store_rect. Three operations, no branching."
+      },
+      "group_drag": "The for-loop over selection_set means ALL selected notes move together. Each gets the same delta applied independently. This is how group-drag works: the user drags one note, but apply_drag applies the movement to the entire selection."
+    },
+
+    "on_canvas_button_release": {
+      "location": "line 1081",
+      "purpose": "End the drag gesture and clean up",
+      "process": "cancel_drag() clears G_DRAG. Reset hover state and cursor. No sync_all() needed because the world model already reflects the final position from the last motion event."
+    }
+  },
+
+  "creation": {
+    "summary": "Creating a spatial attachment for a note involves converting a canvas-space mouse click into a world-space bounding box, then populating both the world model (G_ATTACH) and the render intent (G_CANVAS).",
+    "function": "attach_new_square()",
+    "location": "line 766",
+    "trigger": "Click on empty canvas when exactly one unattached note is selected in the tree",
+
+    "register_sequence": {
+      "description": "The creation sequence is a compact demonstration of how the coordinates machine simplifies spatial operations",
+      "steps": [
+        {
+          "operation": "load_pt('event')",
+          "effect": "Point register = mouse position, coord_type = 'c' (canvas space)",
+          "purpose": "Start with where the user clicked"
+        },
+        {
+          "operation": "project_to('w')",
+          "effect": "Point register transformed to world coordinates",
+          "purpose": "Convert click location to the world model's coordinate system"
+        },
+        {
+          "operation": "explode_pt(20)",
+          "effect": "Rect register = 40x40 box centered on the point, in world space",
+          "purpose": "Turn a point (where the user clicked) into a rectangle (the note's spatial extent)"
+        },
+        {
+          "operation": "get_xyxy()",
+          "effect": "Extract the rect as a tuple for storing in G_ATTACH",
+          "purpose": "Read out the computed geometry"
+        }
+      ],
+      "total_lines_of_coordinate_math": "4 function calls. No manual arithmetic. No coordinate constants. The coordinates machine encapsulates all the projection and geometry."
+    },
+    "label_positioning": {
+      "description": "After creating the rect, the label position is computed using the same register state",
+      "steps": [
+        "load_pt('sw') -- extract the southwest (bottom-left) corner from the rect register",
+        "slide_pt(5, 10) -- offset 5 right and 10 down from the corner",
+        "get_xy() -- read the computed label position"
+      ],
+      "design_note": "The label is positioned relative to the rect's geometry, using the rect register that was just set up by explode_pt. No redundant coordinate loading. The machine's registers carry state forward naturally."
+    },
+    "then": "G_ATTACH and G_CANVAS entries are written, then sync_all() makes it visible"
+  },
+
+  "deletion": {
+    "summary": "Deletion removes notes from the world model. Visual cleanup is handled automatically by the rendering pipeline's orphan collection.",
+    "trigger": "Delete or Backspace key",
+    "handler": "on_delete_key() at line 978",
+
+    "process": [
+      "Copy selection_set (because we're modifying it during iteration)",
+      "For each selected note_id:",
+      "  iterate_note(note_id) -- set CUR context",
+      "  delete_attachment() -- the actual deletion"
+    ],
+
+    "delete_attachment_internals": {
+      "location": "line 814",
+      "steps": [
+        "If the note is selected, toggle_selected() to remove it from selection (this also triggers sync_all and visual update)",
+        "If the note is the one being dragged, cancel_drag() to prevent the drag system from referencing a deleted note",
+        "del G_CANVAS[note_id] -- remove render intent",
+        "del G_ATTACH[note_id] -- remove world geometry"
+      ],
+      "what_about_the_canvas_items": "They are NOT explicitly deleted here. The next sync_all() (triggered by toggle_selected, or by whatever follows) will run render_all(), which will find those Tk canvas items in the orphan_candidates set (they're tagged 'rendered' but no longer referenced by any G_CANVAS entry) and delete them. Deletion is implicit.",
+      "defensive_checks": "The function handles the case where the deleted note is currently selected or currently being dragged. These are the two pieces of interaction state that could hold stale references to a deleted note."
+    }
+  },
+
+  "panning": {
+    "summary": "Panning is a drag mode that moves the camera instead of notes. The camera is defined by (cam_x, cam_y) in world space, and the rendering pipeline's projection math handles the rest.",
+    "trigger": "Click and drag on empty canvas (no note under mouse)",
+    "mechanism": {
+      "at_start": "start_drag('pan') captures mouse position. If Ctrl not held, clears selection.",
+      "during_motion": "Compute canvas-space delta. Convert to world-space units by scaling with zoom_den/zoom_num. Subtract from cam_x, cam_y (opposite direction gives grab-and-pull feel). Call sync_all().",
+      "at_end": "cancel_drag() clears state."
+    },
+    "connection_to_rendering": "Panning modifies g['cam_x'] and g['cam_y']. These are read by project_to() inside render_all() to transform every note's world-space bbox into canvas-space coordinates. Moving the camera causes every note to shift on screen without any note's world position changing. The world model is stable; only the view moves.",
+    "zoom_interaction": "The delta conversion (dx * zoom_den // zoom_num) ensures that panning speed in world units is inversely proportional to zoom level. At higher zoom, the same mouse pixel movement translates to fewer world units, which feels natural -- you're looking at a smaller area, so you should move through it more slowly."
+  },
+
+  "hover_and_cursor_feedback": {
+    "summary": "Mouse movement over the canvas provides visual feedback by changing the cursor shape. This is a lightweight, non-rendering interaction path.",
+    "handler": "on_canvas_hover() at line 984",
+    "mechanism": {
+      "reads": "CUR['top'] -- whatever canvas item is under the mouse (set by dispatch_event)",
+      "dedup": "If the item is the same as last time (g['hover_canvas_item']), do nothing. This prevents redundant cursor updates on every pixel of movement.",
+      "cursor_logic": "cursor_for_item() returns 'sizing' for handles (resize cursor), 'fleur' (four-way arrow) for note bodies/labels, or '' (default arrow) for empty canvas.",
+      "stores": "g['hover_canvas_item'] tracks the last hovered item for deduplication"
+    },
+    "on_canvas_mouse_leaves": "Resets hover state and cursor to default when the mouse exits the canvas widget entirely.",
+    "design_note": "This is intentionally the lightest-weight interaction path. No sync_all(), no rules, no rendering. Just a cursor change. It demonstrates that not every event needs to go through the full pipeline."
+  },
+
+  "tree_interaction": {
+    "summary": "The tree widget (left pane) provides an alternative way to select notes and highlight systems. Tree selections translate into the same selection_set and system_highlight state that the canvas uses.",
+    "handler": "on_tree_select() at line 958",
+    "routing": {
+      "system_node": "If iid starts with 'system::', extract system name, clear canvas selection, set system_highlight. This highlights all notes in that system with red outlines via rule_system_highlight.",
+      "leaf_node": "If iid starts with 'leaf::', extract note_id, iterate_note, set_selected. This selects the note on the canvas, shows its details in the text pane, and adds handles if it has a spatial attachment."
+    },
+    "design_note": "The tree doesn't have its own visual logic. It just sets the same world state (selection_set, g['system_highlight']) that the canvas rules read. The visual effect emerges from the rules system during sync_all(). This is the payoff of the declarative model: multiple input sources (canvas click, tree click) produce the same visual result because they modify the same state."
+  },
+
+  "keyboard_commands": {
+    "summary": "Keyboard events are bound at the root window level and dispatched through doit like canvas events.",
+    "bindings": {
+      "Delete / Backspace": "on_delete_key -- delete selected attachments",
+      "Ctrl-S": "save_attachments -- persist to JSON",
+      "Ctrl-O": "load_attachments -- restore from JSON",
+      "1 / 2 / 3": "Toggle tree / canvas / text pane visibility",
+      "Ctrl-Space": "Focus canvas (hide other panes)"
+    },
+    "note": "Keyboard handlers go through doit() and dispatch_event() just like mouse handlers. This means CUR['event'] is available (for modifier key checks via keys_down()), even though keyboard handlers typically don't need mouse position or hit-testing."
+  },
+
+  "how_the_code_is_written": {
+    "summary": "The interaction code follows a distinctive style: parameterless functions that read from and write to shared registers, composed into small pipelines. This is a register-machine idiom applied to UI programming.",
+
+    "register_idiom": {
+      "description": "Functions like apply_drag, attach_new_square, and the rules are all parameterless. They don't take the note_id, the mouse position, or the event as arguments. Instead, they read these from CUR, G_DRAG, or the coordinates machine registers. This is deliberate and has several consequences.",
+      "consequences": [
+        {
+          "name": "Composability without parameter threading",
+          "description": "When apply_drag calls load_rect, slide_rect, store_rect -- none of these need to be told which note to operate on. CUR['note_id'] was set by iterate_note at the top of the loop. The register carries the context implicitly. This eliminates deep parameter chains through nested calls."
+        },
+        {
+          "name": "Uniform calling convention",
+          "description": "Every rule is fn(). Every handler is fn(). Every coordinates operation is fn() or fn(simple_arg). The foreach_note(fn) pattern works because fn takes no arguments -- the arguments are in the register. This uniformity makes it trivial to add new rules or handlers."
+        },
+        {
+          "name": "Pipeline readability",
+          "description": "A sequence like load_pt('event') -> project_to('w') -> explode_pt(20) reads as a pipeline: take the event position, project to world, expand to a box. Each step modifies the registers in place. You read it top to bottom and the data flows forward through the shared register state."
+        },
+        {
+          "name": "Non-reentrancy",
+          "description": "The tradeoff: because state is in shared registers, you cannot safely nest operations that use the same register. The push/pop stack operations exist for exactly this purpose -- saving and restoring register state when nesting is needed. But in practice, the code is structured to avoid needing this often."
+        }
+      ]
+    },
+
+    "handler_shape": {
+      "description": "All canvas event handlers follow the same shape: read context from CUR/G_DRAG, make a decision, modify world state, call sync_all(). They never directly manipulate canvas items. They are 'command interpreters' that turn events into state changes.",
+      "examples": {
+        "on_canvas_button_press": "Read CUR['top'], CUR['top_note_id']. Decide: create or drag? Modify: G_ATTACH+G_CANVAS (create) or G_DRAG+selection_set (drag). Render: sync_all().",
+        "on_canvas_motion": "Read G_DRAG for mode and delta. Modify: G_ATTACH via apply_drag (note mode) or g['cam_x/y'] (pan mode). Render: sync_all().",
+        "on_delete_key": "Read selection_set. Modify: delete G_ATTACH+G_CANVAS entries. Render: sync_all() triggered by toggle_selected inside delete_attachment."
+      }
+    },
+
+    "function_naming_convention": {
+      "on_": "Event handlers triggered by platform events (on_canvas_button_press, on_tree_select, on_delete_key)",
+      "rule_": "Rule functions run during the rules phase (rule_default_appearance, rule_selected_highlight, rule_system_highlight, rule_handles)",
+      "load_ / store_": "Coordinates machine: transfer data between world model and registers",
+      "slide_ / explode_": "Coordinates machine: transform register contents in place",
+      "push_ / pop_": "Coordinates machine: save/restore register state on stack",
+      "project_to": "Coordinates machine: change coordinate space of all registers",
+      "is_ / has_ / only_": "Predicates that read CUR and selection state",
+      "set_ / clear_ / toggle_": "Selection mutators",
+      "sync_": "Functions that bridge between state changes and rendering (sync_all, sync_tree_selection, sync_json_view)",
+      "get_": "Read register contents as tuples (get_xy, get_xyxy)"
+    }
+  },
+
+  "connection_to_rendering": {
+    "summary": "Interaction code modifies the world model and calls sync_all(). It never touches the rendering internals. The boundary is clean: interaction writes state, rendering reads state.",
+    "the_contract": {
+      "interaction_side": [
+        "Modify G_ATTACH entries (bbox, color)",
+        "Modify selection_set (add, remove, clear)",
+        "Modify g (cam_x, cam_y, system_highlight, canvas_view_w/h)",
+        "Create or delete G_CANVAS entries (but only the structural act of adding/removing -- never modify render intent fields directly except during creation)",
+        "Call sync_all() when done"
+      ],
+      "rendering_side": [
+        "Read G_ATTACH, G_INV, selection_set, g to compute render intent via rules",
+        "Write G_CANVAS render intent fields (rect_outline, rect_width, label_coord, etc.)",
+        "Manage platform object handles (create, update, delete Tk canvas items)",
+        "Never modify G_ATTACH, selection_set, or g"
+      ],
+      "sync_all_is_the_boundary": "The only function that interaction code calls to trigger rendering. It means 'I'm done changing state; please reconcile the display.' Interaction code does not need to know how many rules exist, what they check, or how the renderer works."
+    },
+    "exception": "attach_new_square() writes both G_ATTACH and a full G_CANVAS entry (with default render intent), because it is creating a new entity that needs both. This is the only place where interaction code writes G_CANVAS fields. It writes defaults that will immediately be overwritten by rules during the sync_all() that follows."
+  },
+
+  "principles_for_transfer": [
+    {
+      "name": "Normalize before dispatch",
+      "principle": "All events pass through a single function that resolves what the user is targeting, before any handler sees the event. Handlers receive a fully resolved context, not a raw platform event.",
+      "benefit": "Eliminates redundant hit-testing, ensures consistent context across all handlers, and decouples handlers from the platform event model.",
+      "transfer_note": "In the new system, define what 'resolved context' means for your platform. It might include: which entity is under the cursor, which mode the system is in, what modifier keys are held, what the current selection is. Resolve all of this once in your dispatch function."
+    },
+    {
+      "name": "Interaction as state mutation + sync",
+      "principle": "Event handlers never directly manipulate visual output. They modify the world model, then call a single sync function that makes the display match the new state.",
+      "benefit": "The visual state is always a pure function of the world state. You can't get the display out of sync with the data. Multiple handlers that affect the same visual properties (selection from tree, selection from canvas) automatically produce consistent results.",
+      "transfer_note": "Resist the temptation to have handlers 'just quickly update the display' as an optimization. This creates parallel update paths that inevitably diverge."
+    },
+    {
+      "name": "Drag as captured context + incremental delta",
+      "principle": "At drag-start, capture everything you need to know about what was clicked. During motion, compute frame-to-frame deltas and apply them to the world model. At release, clear the context.",
+      "benefit": "Frame-to-frame deltas avoid accumulated error. The captured context means motion events don't need to re-resolve what's being dragged. The three-phase structure (start/motion/release) maps directly to mouse button press/motion/release events on every platform.",
+      "transfer_note": "The key detail is updating G_DRAG['x','y'] AFTER applying the delta, not before. This is what makes the delta incremental. Also: apply the delta to ALL selected items, not just the one that was clicked, to get group drag for free."
+    },
+    {
+      "name": "Register-machine style for spatial operations",
+      "principle": "Coordinate math goes through named register operations (load, project, slide, store) rather than inline arithmetic. The registers carry state forward through a sequence of operations, like a pipeline.",
+      "benefit": "Each spatial operation is a single function call. The operations compose naturally. The coordinate space is tracked automatically (you can't accidentally mix world and canvas coordinates because project_to changes the coord_type tag). And the code reads as a narrative: 'take the event position, project to world, expand to a box.'",
+      "transfer_note": "This style works best when you have a small set of recurring spatial patterns (load-project-update-store, load-transform-store). Define your register operations for YOUR patterns. Don't over-abstract -- the goal is readability, not generality."
+    },
+    {
+      "name": "One decision point per interaction path",
+      "principle": "on_canvas_button_press makes ONE decision: create, drag-note, or drag-pan. It doesn't try to also decide about selection, cursor, or visual feedback. Those are handled by start_drag (selection), on_canvas_hover (cursor), and sync_all (visuals).",
+      "benefit": "Each function has a clear, singular responsibility. The routing logic (what does this click MEAN?) is separate from the effect logic (what does that meaning DO?).",
+      "transfer_note": "When porting, map out your interaction decision tree first. Each level of the tree should be one function. Don't collapse multiple decisions into one function, and don't spread one decision across multiple functions."
+    },
+    {
+      "name": "Selection as world state, not UI state",
+      "principle": "selection_set is part of the world model, not part of the UI. Selection affects rendering (through rules), interaction (through drag behavior), and auxiliary views (tree highlight, text pane content). All of these read the same set.",
+      "benefit": "There is exactly one source of truth for 'what is selected.' Changing selection from any source (canvas click, tree click, keyboard) automatically updates all dependent views through the same sync_all() path.",
+      "transfer_note": "Put selection in your world model, not in your UI framework's selection mechanism. Use your UI framework's selection as a display-only output, driven by your world model's selection state."
+    },
+    {
+      "name": "Guard against stale references in interaction state",
+      "principle": "delete_attachment() checks whether the deleted note is selected (and deselects it) and whether it's being dragged (and cancels the drag). These are the two places where interaction state can hold references to a note.",
+      "benefit": "Prevents crashes or ghost behavior from dragging a deleted note or trying to render selection highlight for a note that no longer exists.",
+      "transfer_note": "When implementing deletion, audit every piece of interaction state that could reference the deleted entity. Selection set, drag state, hover state, focus state -- clean them all up. This is easy to forget and causes subtle bugs."
+    }
+  ]
+}
