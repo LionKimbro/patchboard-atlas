@@ -1,0 +1,50 @@
+{
+  "date": "2026-02-13",
+  "context": "Post-rendering Phase 1 implementation. Rendering pipeline exists but needs architectural cleanup before adding visual complexity.",
+
+  "todo": [
+    {
+      "id": 1,
+      "area": "rendering rules",
+      "title": "Rules should take no arguments",
+      "description": "Currently rule functions take (eid, sx, sy). They should take no arguments and instead read the current entity from the stack (S) or from a mem dictionary key (e.g., mem.var['current-eid']). This aligns with the parameter reduction strategy in the rendering spec.",
+      "status": "pending"
+    },
+    {
+      "id": 2,
+      "area": "rendering rules",
+      "title": "Rules must not assume EID refers to a component ID card",
+      "description": "Rules currently assume every EID in cmp_entities has a cmp_card_ref entry. Rules need to guard: check that the entity actually has a component ID card before accessing cmp_card_ref. Other entity types may exist in the future.",
+      "status": "pending"
+    },
+    {
+      "id": 3,
+      "area": "rendering pipeline",
+      "title": "Review all function signatures for stack/mem consistency",
+      "description": "Audit every function in rendering.py. Ideally functions take no arguments. Where arguments exist, verify they make sense. The current EID being iterated should be communicated via the stack or mem.var, not passed as a parameter.",
+      "status": "pending"
+    },
+    {
+      "id": 4,
+      "area": "GUI interaction",
+      "title": "Normalize GUI interaction from scavenging patterns",
+      "description": "Review and normalize how GUI interactions (clicks, selection, placement) are wired up. Draw from scavenging work to establish consistent event handling patterns.",
+      "status": "pending"
+    },
+    {
+      "id": 5,
+      "area": "GUI interaction",
+      "title": "Review canvas click processing",
+      "description": "Examine how click processing on the Canvas works. Make sure the event handling, coordinate unprojection, and placement flow are clean and consistent with the overall architecture.",
+      "status": "pending"
+    },
+    {
+      "id": 6,
+      "area": "rendering visual",
+      "title": "Sophisticated canvas presentation with channels",
+      "description": "After architectural cleanup is solid, develop a richer visual presentation on the Canvas that includes in-channels and out-channels for each component. Develop collaboratively with Wing-Cat via the ChatGPT conversation linked in the rendering spec documents.",
+      "status": "blocked",
+      "blocked_by": [1, 2, 3, 4, 5]
+    }
+  ]
+}
