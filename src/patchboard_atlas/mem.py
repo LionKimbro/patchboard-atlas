@@ -33,3 +33,13 @@ def drop():
 def clear():
     """( ... -- )  Empty the stack."""
     S.clear()
+    var.clear()
+
+
+def poke(varname, val):
+    var[varname] = val
+
+def peek(varname):
+    return var[varname]
+
+

@@ -10,6 +10,7 @@ sync_all() is the entry point: rebuild intent, then flush to canvas.
 from patchboard_atlas import ecs_world as ecs
 from patchboard_atlas import gui_scaffold
 from patchboard_atlas import coord_machine as cm
+from patchboard_atlas import mem
 
 
 # ============================================================
@@ -46,11 +47,36 @@ def entity_tag(eid):
 
 
 # ============================================================
+# RULE EXECUTION LOOKUP HELPER
+# ============================================================
+
+def keep_codes(eid):
+    mem.poke("eid", eid)
+    mem.poke("spatial", ecs.cmp_spatial[eid])  # required for rebuild_render_intent ecs
+    mem.poke("card", ecs.cmp_card_ref.get(eid))  
+
+def lookup_codes(thing_codes):
+    L = []
+    spatial = mem.peek("spatial")
+    for ch in thing_codes:
+        if ch == "#": L.append(mem.peek("eid"))
+        elif ch == "C": L.append(mem.peek("card"))
+        elif ch == "S": L.append(mem.peek("spatial"))
+        elif ch == "x": L.append(spatial["x"])
+        elif ch == "y": L.append(spatial["y"])
+        elif ch == "t": L.append(mem.peek("card")["title"])  # if you have the card, you have a title
+    return L
+
+
+# ============================================================
 # RULES
 # ============================================================
 
-def rule_perimeter(eid, sx, sy):
+def rule_perimeter():
     """Emit a perimeter rectangle for a placed entity."""
+    if mem.peek("card") is None:
+        return
+    eid, sx, sy = lookup_codes("#xy")
     half_w = COMPONENT_W // 2
     half_h = COMPONENT_H // 2
     ek = ("entity", eid, "perimeter")
@@ -67,17 +93,17 @@ def rule_perimeter(eid, sx, sy):
     }
 
 
-def rule_title(eid, sx, sy):
+def rule_title():
     """Emit a title label for a placed entity."""
-    card = ecs.cmp_card_ref.get(eid)
-    if card is None:
+    if mem.peek("card") is None:
         return
+    eid, sx, sy, title = lookup_codes("#xyt")
     ek = ("entity", eid, "title")
     RENDER[ek] = {
         "type": "text",
         "x": sx,
         "y": sy,
-        "text": card.get("title", ""),
+        "text": title,
         "fill": TITLE_FILL,
         "font": ("Consolas", 10),
         "tags": (ek_to_tag(ek), entity_tag(eid), "kind|component"),
@@ -98,10 +124,9 @@ def rebuild_render_intent():
         spatial = ecs.cmp_spatial.get(eid)
         if spatial is None:
             continue
-        sx = spatial["x"]
-        sy = spatial["y"]
+        keep_codes(eid)
         for rule in RULES:
-            rule(eid, sx, sy)
+            rule()
 
 
 # ============================================================
