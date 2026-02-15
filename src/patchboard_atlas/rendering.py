@@ -237,35 +237,55 @@ def _update_viewport():
 
 
 # ============================================================
+# EVENT DISPATCH
+# ============================================================
+
+def dispatch_event(event, handler_fn):
+    """Normalize a raw Tk event into mem context, then call handler.
+
+    Resolves: event object, selected EID, viewport, and world-space
+    click position. Handler reads context from mem.peek / coord machine.
+    """
+    mem.poke("event", event)
+
+    # resolve selected EID from tree
+    tree = gui_scaffold.widgets["component-tree"]
+    selected = tree.selection()
+    eid = int(selected[0]) if selected else None
+    mem.poke("eid", eid)
+
+    # update viewport before any coordinate work
+    _update_viewport()
+
+    # load event coords into coord machine and project to world
+    cm.g_event["x"] = event.x
+    cm.g_event["y"] = event.y
+    cm.load_pt("event")
+    cm.project_to("w")
+
+    handler_fn()
+
+
+def doit(fn):
+    """Wrap a parameterless handler into a Tk-compatible callback."""
+    return lambda e: dispatch_event(e, fn)
+
+
+# ============================================================
 # PLACEMENT
 # ============================================================
 
-def place_selected_component(event):
-    """Canvas click handler: place the selected tree component at click position."""
-    tree = gui_scaffold.widgets.get("component-tree")
-    if tree is None:
+def place_selected_component():
+    """Place the selected tree component at the dispatched click position."""
+    eid = mem.peek("eid")
+    if eid is None:
         return
-
-    selected = tree.selection()
-    if not selected:
-        return
-
-    eid = int(selected[0])
 
     # already placed -- ignore
     if eid in ecs.cmp_spatial:
         return
 
-    # ensure viewport is current before unprojecting
-    _update_viewport()
-
-    # unproject canvas click to world coords
-    cm.g_event["x"] = event.x
-    cm.g_event["y"] = event.y
-    cm.load_pt("event")
-    cm.project_to("w")
     wx, wy = cm.get_xy()
-
     ecs.cmp_spatial[eid] = {"x": wx, "y": wy}
 
     sync_all()
@@ -279,4 +299,4 @@ def place_selected_component(event):
 def bind_canvas_events():
     """Attach rendering-related event bindings to the canvas."""
     canvas = get_canvas()
-    canvas.bind("<Button-1>", place_selected_component)
+    canvas.bind("<Button-1>", doit(place_selected_component))
