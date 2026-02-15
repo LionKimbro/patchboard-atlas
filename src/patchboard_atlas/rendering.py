@@ -33,6 +33,14 @@ RENDER = {}
 
 
 # ============================================================
+# CANVAS LOCATION HELPER
+# ============================================================
+
+def get_canvas():
+    return gui_scaffold.widgets["canvas"]
+
+
+# ============================================================
 # ELEMENT KEY HELPERS
 # ============================================================
 
@@ -47,7 +55,7 @@ def entity_tag(eid):
 
 
 # ============================================================
-# RULE EXECUTION LOOKUP HELPER
+# RULE EXECUTION LOOKUP HELPERS
 # ============================================================
 
 def keep_codes(eid):
@@ -133,8 +141,9 @@ def rebuild_render_intent():
 # FLUSH TO CANVAS
 # ============================================================
 
-def _collect_existing_ek_tags(canvas):
+def _collect_existing_ek_tags():
     """Return set of ek|... tags currently on the canvas."""
+    canvas = get_canvas()
     found = set()
     for item_id in canvas.find_withtag("kind|component"):
         for tag in canvas.gettags(item_id):
@@ -143,8 +152,9 @@ def _collect_existing_ek_tags(canvas):
     return found
 
 
-def _create_element(canvas, desc):
+def _create_element(desc):
     """Create a bare canvas item with tags. Returns the item ID."""
+    canvas = get_canvas()
     if desc["type"] == "rectangle":
         item_id = canvas.create_rectangle(0, 0, 0, 0, tags=desc["tags"])
     elif desc["type"] == "text":
@@ -154,8 +164,9 @@ def _create_element(canvas, desc):
     return item_id
 
 
-def _update_element(canvas, item_id, desc):
+def _update_element(item_id, desc):
     """Shape and style an existing canvas item from a descriptor."""
+    canvas = get_canvas()
     if desc["type"] == "rectangle":
         cm.g_coord["x0"] = desc["x0"]
         cm.g_coord["y0"] = desc["y0"]
@@ -186,22 +197,20 @@ def _update_element(canvas, item_id, desc):
 
 def flush_to_canvas():
     """Reconcile RENDER intent against canvas items."""
-    canvas = gui_scaffold.widgets.get("canvas")
-    if canvas is None:
-        return
+    canvas = get_canvas()
 
     declared_tags = set(ek_to_tag(ek) for ek in RENDER)
-    existing_tags = _collect_existing_ek_tags(canvas)
+    existing_tags = _collect_existing_ek_tags()
 
     # create or update declared elements
     for ek, desc in RENDER.items():
         ek_tag = ek_to_tag(ek)
         items = canvas.find_withtag(ek_tag)
         if not items:
-            item_id = _create_element(canvas, desc)
+            item_id = _create_element(desc)
         else:
             item_id = items[0]
-        _update_element(canvas, item_id, desc)
+        _update_element(item_id, desc)
 
     # delete elements no longer declared
     for old_tag in existing_tags - declared_tags:
@@ -222,9 +231,7 @@ def sync_all():
 
 def _update_viewport():
     """Push current canvas pixel size into the coordinate machine."""
-    canvas = gui_scaffold.widgets.get("canvas")
-    if canvas is None:
-        return
+    canvas = get_canvas()
     canvas.update_idletasks()
     cm.set_viewport(canvas.winfo_width(), canvas.winfo_height())
 
@@ -271,7 +278,5 @@ def place_selected_component(event):
 
 def bind_canvas_events():
     """Attach rendering-related event bindings to the canvas."""
-    canvas = gui_scaffold.widgets.get("canvas")
-    if canvas is None:
-        return
+    canvas = get_canvas()
     canvas.bind("<Button-1>", place_selected_component)
