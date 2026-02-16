@@ -376,3 +376,16 @@ def get_xy():
 
 def get_xyxy():
     return (g_coord["x0"], g_coord["y0"], g_coord["x1"], g_coord["y1"])
+
+
+# ============================================================
+# INTAKE
+# ============================================================
+
+def intake_event(event, flags=""):
+    g_event["x"] = event.x
+    g_event["y"] = event.y
+    if "w" in flags:
+        load_pt("event")
+        project_to("w")
+

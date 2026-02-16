@@ -11,6 +11,7 @@ from patchboard_atlas import ecs_world as ecs
 from patchboard_atlas import gui_scaffold
 from patchboard_atlas import coord_machine as cm
 from patchboard_atlas import mem
+from patchboard_atlas import eid_projection
 
 
 # ============================================================
@@ -57,11 +58,6 @@ def entity_tag(eid):
 # ============================================================
 # RULE EXECUTION LOOKUP HELPERS
 # ============================================================
-
-def keep_codes(eid):
-    mem.poke("eid", eid)
-    mem.poke("spatial", ecs.cmp_spatial[eid])  # required for rebuild_render_intent ecs
-    mem.poke("card", ecs.cmp_card_ref.get(eid))  
 
 def lookup_codes(thing_codes):
     L = []
@@ -129,10 +125,9 @@ def rebuild_render_intent():
     """Clear RENDER and recompute from world state."""
     RENDER.clear()
     for eid in sorted(ecs.cmp_entities):
-        spatial = ecs.cmp_spatial.get(eid)
-        if spatial is None:
+        eid_projection.project_eid(eid)
+        if mem.peek("spatial") is None:
             continue
-        keep_codes(eid)
         for rule in RULES:
             rule()
 
@@ -248,21 +243,13 @@ def dispatch_event(event, handler_fn):
     """
     mem.poke("event", event)
 
-    # resolve selected EID from tree
-    tree = gui_scaffold.widgets["component-tree"]
-    selected = tree.selection()
-    eid = int(selected[0]) if selected else None
-    mem.poke("eid", eid)
+    # EID projections:
+    eid_projection.project_selected("tree")
 
-    # update viewport before any coordinate work
+    # coordinates machine:
     _update_viewport()
-
-    # load event coords into coord machine and project to world
-    cm.g_event["x"] = event.x
-    cm.g_event["y"] = event.y
-    cm.load_pt("event")
-    cm.project_to("w")
-
+    cm.intake_event(event, "w")  # "w": project to world
+    
     handler_fn()
 
 

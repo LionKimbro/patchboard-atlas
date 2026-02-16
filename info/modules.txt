@@ -25,8 +25,9 @@ GUI:
 logical processing:
   coord_machine.py  -- coordinate conversions register machine
 
-Component ID Cards:
+Entity IDs & Component ID Cards:
   ecs_world.py  -- ECS identity layer w/ g_next_entity_id, cmp_entities, cmp_card_ref, cmp_spatial
+  eid_projection.py  -- EID shortcut projection
   component_registry.py  -- canonical data cache for loaded Component ID Cards
 
 

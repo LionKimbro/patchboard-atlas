@@ -47,3 +47,6 @@ def reset_ecs():
     cmp_entities.clear()
     cmp_card_ref.clear()
     cmp_spatial.clear()
+
+
+
