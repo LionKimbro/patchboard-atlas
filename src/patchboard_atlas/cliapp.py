@@ -66,11 +66,13 @@ def register_tests():
     from guitest.tree_projection_tests import register_tree_projection_tests
     from guitest.rendering_placement_tests import register_rendering_placement_tests
     from guitest.rendering_pan_tests import register_rendering_pan_tests
+    from guitest.rendering_drag_tests import register_rendering_drag_tests
 
     register_gui_scaffold_tests()
     register_tree_projection_tests()
     register_rendering_placement_tests()
     register_rendering_pan_tests()
+    register_rendering_drag_tests()
 
 
 def main():

@@ -67,6 +67,18 @@ def entity_tag(eid):
     return f"entity|{eid}"
 
 
+def _hit_test_entity():
+    """Return the EID of the placed entity under the mouse, or None."""
+    canvas = get_canvas()
+    items = canvas.find_withtag("current")
+    if not items:
+        return None
+    for tag in canvas.gettags(items[0]):
+        if tag.startswith("entity|"):
+            return int(tag.split("|")[1])
+    return None
+
+
 # ============================================================
 # RULE EXECUTION LOOKUP HELPERS
 # ============================================================
@@ -292,12 +304,19 @@ def place_selected_component():
 
 
 # ============================================================
-# PAN
+# DRAG
 # ============================================================
 
 def start_pan():
     """Begin a pan drag from the current world-space position."""
     g_drag["mode"] = "pan"
+    g_drag["x"], g_drag["y"] = cm.get_xy()
+
+
+def start_drag_note(eid):
+    """Begin a note drag on the given entity."""
+    g_drag["mode"] = "note"
+    g_drag["eid"] = eid
     g_drag["x"], g_drag["y"] = cm.get_xy()
 
 
@@ -311,22 +330,40 @@ def cancel_drag():
 # ============================================================
 
 def on_canvas_button_press():
-    """Decision point for Button-1: place component or start pan."""
+    """Decision point for Button-1: place, drag note, or pan."""
     eid = mem.peek("eid")
     if eid is not None and eid not in ecs.cmp_spatial:
         place_selected_component()
+        return
+    hit_eid = _hit_test_entity()
+    if hit_eid is not None:
+        start_drag_note(hit_eid)
     else:
         start_pan()
 
 
 def on_canvas_motion():
-    """Handle B1-Motion: pan camera if dragging."""
-    if g_drag["mode"] != "pan":
-        return
-    wx, wy = cm.get_xy()
-    cm.g_cam["x"] -= wx - g_drag["x"]
-    cm.g_cam["y"] -= wy - g_drag["y"]
-    sync_all()
+    """Handle B1-Motion: pan or drag note."""
+    mode = g_drag["mode"]
+    if mode == "pan":
+        wx, wy = cm.get_xy()
+        cm.g_cam["x"] -= wx - g_drag["x"]
+        cm.g_cam["y"] -= wy - g_drag["y"]
+        sync_all()
+    elif mode == "note":
+        wx, wy = cm.get_xy()
+        dx = wx - g_drag["x"]
+        dy = wy - g_drag["y"]
+        eid = g_drag["eid"]
+        spatial = ecs.cmp_spatial.get(eid)
+        if spatial is None:
+            cancel_drag()
+            return
+        spatial["x"] += dx
+        spatial["y"] += dy
+        g_drag["x"] = wx
+        g_drag["y"] = wy
+        sync_all()
 
 
 def on_canvas_button_release():
