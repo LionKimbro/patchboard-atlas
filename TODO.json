@@ -29,14 +29,14 @@
       "area": "GUI interaction",
       "title": "Normalize GUI interaction from scavenging patterns",
       "description": "Review and normalize how GUI interactions (clicks, selection, placement) are wired up. Draw from scavenging work to establish consistent event handling patterns.",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": 5,
       "area": "GUI interaction",
       "title": "Review canvas click processing",
       "description": "Examine how click processing on the Canvas works. Make sure the event handling, coordinate unprojection, and placement flow are clean and consistent with the overall architecture.",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": 6,
