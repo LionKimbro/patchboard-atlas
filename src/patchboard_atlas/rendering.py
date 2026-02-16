@@ -31,10 +31,10 @@ TITLE_FILL = "#ccddee"
 # ============================================================
 
 g_drag = {
-    "mode": None,      # "pan" | "note" | None
+    "mode": None,      # "pan" | "drag" | None
     "x": 0,            # drag anchor x in world space
     "y": 0,            # drag anchor y in world space
-    "eid": None,        # entity being dragged (for future "note" mode)
+    "eid": None,        # entity being dragged (for future "drag" mode)
 }
 
 
@@ -313,9 +313,9 @@ def start_pan():
     g_drag["x"], g_drag["y"] = cm.get_xy()
 
 
-def start_drag_note(eid):
+def start_drag_component(eid):
     """Begin a note drag on the given entity."""
-    g_drag["mode"] = "note"
+    g_drag["mode"] = "drag"
     g_drag["eid"] = eid
     g_drag["x"], g_drag["y"] = cm.get_xy()
 
@@ -337,7 +337,7 @@ def on_canvas_button_press():
         return
     hit_eid = _hit_test_entity()
     if hit_eid is not None:
-        start_drag_note(hit_eid)
+        start_drag_component(hit_eid)
     else:
         start_pan()
 
@@ -350,7 +350,7 @@ def on_canvas_motion():
         cm.g_cam["x"] -= wx - g_drag["x"]
         cm.g_cam["y"] -= wy - g_drag["y"]
         sync_all()
-    elif mode == "note":
+    elif mode == "drag":
         wx, wy = cm.get_xy()
         dx = wx - g_drag["x"]
         dy = wy - g_drag["y"]

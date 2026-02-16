@@ -47,14 +47,14 @@ def step_drag_component():
     eid = harness.g["_drag_test_eid"]
 
     # Start drag note via dispatch (hit_test relies on Tk "current" tag
-    # which needs a real pointer, so we call start_drag_note directly)
+    # which needs a real pointer, so we call start_drag_component directly)
     cm.set_viewport(800, 600)
     rendering.dispatch_event(
         _FakeEvent(200, 100),
-        lambda: rendering.start_drag_note(eid),
+        lambda: rendering.start_drag_component(eid),
     )
 
-    if rendering.g_drag["mode"] != "note":
+    if rendering.g_drag["mode"] != "drag":
         return ("fail", f"expected drag mode 'note', got {rendering.g_drag['mode']!r}")
 
     # Motion: shift 30px right, 20px down in canvas (== world at zoom 1:1)
