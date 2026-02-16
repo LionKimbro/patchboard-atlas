@@ -20,4 +20,8 @@ def reset():
     ecs.reset_ecs()
     component_registry.clear_registry()
     rendering.RENDER.clear()
+    rendering.g_drag["mode"] = None
+    rendering.g_drag["x"] = 0
+    rendering.g_drag["y"] = 0
+    rendering.g_drag["eid"] = None
     cm.coord_reset_state()

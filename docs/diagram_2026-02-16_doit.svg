@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   sodipodi:docname="diagram_2026-02-16_doit.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#999999"
+     borderopacity="1"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.73851712"
+     inkscape:cx="780.61833"
+     inkscape:cy="272.84405"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <marker
+       style="overflow:visible"
+       id="marker1"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Concave triangle arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="M -2,-4 9,0 -2,4 c 2,-2.33 2,-5.66 0,-8 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path1" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <text
+       xml:space="preserve"
+       style="font-size:6.35px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:0.264583"
+       x="20.181938"
+       y="43.078957"
+       id="text1-7-7-7"><tspan
+         sodipodi:role="line"
+         id="tspan1-7-2-5"
+         style="font-size:6.35px;stroke-width:0.264583"
+         x="20.181938"
+         y="43.078957">DoIt &amp; Coordinate Machine</tspan></text>
+    <g
+       id="g8"
+       transform="translate(-25.436671,-32.60193)">
+      <g
+         id="layer1-5"
+         transform="translate(-17.729629,-19.245493)">
+        <text
+           xml:space="preserve"
+           style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:0.264583"
+           x="90.85643"
+           y="105.53066"
+           id="text3"><tspan
+             sodipodi:role="line"
+             id="tspan3"
+             style="stroke-width:0.264583"
+             x="90.85643"
+             y="105.53066">doit(fn)</tspan></text>
+      </g>
+      <text
+         xml:space="preserve"
+         style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:0.264583"
+         x="75.425232"
+         y="93.521652"
+         id="text3-5"><tspan
+           sodipodi:role="line"
+           id="tspan3-2"
+           style="stroke-width:0.264583"
+           x="75.425232"
+           y="93.521652">lambda e:</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="75.425232"
+           y="97.490402"
+           id="tspan1">  dispatch_event(e, fn)</tspan></text>
+      <path
+         style="font-variation-settings:normal;vector-effect:none;fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;-inkscape-stroke:none;marker-end:url(#marker1);stop-color:#000000"
+         d="m 77.913553,86.875213 -7.544609,8.648699"
+         id="path31" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;stroke-width:0.264583"
+         x="79.775993"
+         y="104.53475"
+         id="text3-5-5"><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="79.775993"
+           y="104.53475"
+           id="tspan1-6">dispatch_event(e, fn)</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="79.775993"
+           y="108.5035"
+           id="tspan2">  [event] poke's event into &quot;event&quot;,</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="79.775993"
+           y="112.47225"
+           id="tspan4">  [EID] projects current Tree selected EID,</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="79.775993"
+           y="116.441"
+           id="tspan6">  [coords] updates viewport,</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="79.775993"
+           y="120.40975"
+           id="tspan7">  [coords] projects event XY into world cooridinates</tspan><tspan
+           sodipodi:role="line"
+           style="stroke-width:0.264583"
+           x="79.775993"
+           y="124.3785"
+           id="tspan8">  calls fn()</tspan></text>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;text-align:end;writing-mode:lr-tb;direction:ltr;text-anchor:end;fill:#000000;stroke-width:0.264583"
+       x="190.18398"
+       y="21.404564"
+       id="text1-8-6"><tspan
+         sodipodi:role="line"
+         style="text-align:end;text-anchor:end;stroke-width:0.264583"
+         x="190.18398"
+         y="21.404564"
+         id="tspan22-8">title: User Interactions on Canvas pg1</tspan><tspan
+         sodipodi:role="line"
+         style="text-align:end;text-anchor:end;stroke-width:0.264583"
+         x="190.18398"
+         y="25.373314"
+         id="tspan26">written: 2026-02-16</tspan></text>
+  </g>
+</svg>

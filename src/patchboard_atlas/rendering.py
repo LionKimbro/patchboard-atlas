@@ -27,6 +27,18 @@ TITLE_FILL = "#ccddee"
 
 
 # ============================================================
+# DRAG STATE
+# ============================================================
+
+g_drag = {
+    "mode": None,      # "pan" | "note" | None
+    "x": 0,            # drag anchor x in world space
+    "y": 0,            # drag anchor y in world space
+    "eid": None,        # entity being dragged (for future "note" mode)
+}
+
+
+# ============================================================
 # RENDER INTENT
 # ============================================================
 
@@ -280,10 +292,56 @@ def place_selected_component():
 
 
 # ============================================================
+# PAN
+# ============================================================
+
+def start_pan():
+    """Begin a pan drag from the current world-space position."""
+    g_drag["mode"] = "pan"
+    g_drag["x"], g_drag["y"] = cm.get_xy()
+
+
+def cancel_drag():
+    """Clear drag state without applying any final action."""
+    g_drag["mode"] = None
+
+
+# ============================================================
+# CANVAS EVENT HANDLERS
+# ============================================================
+
+def on_canvas_button_press():
+    """Decision point for Button-1: place component or start pan."""
+    eid = mem.peek("eid")
+    if eid is not None and eid not in ecs.cmp_spatial:
+        place_selected_component()
+    else:
+        start_pan()
+
+
+def on_canvas_motion():
+    """Handle B1-Motion: pan camera if dragging."""
+    if g_drag["mode"] != "pan":
+        return
+    wx, wy = cm.get_xy()
+    cm.g_cam["x"] -= wx - g_drag["x"]
+    cm.g_cam["y"] -= wy - g_drag["y"]
+    sync_all()
+
+
+def on_canvas_button_release():
+    """Handle ButtonRelease-1: end any drag."""
+    g_drag["mode"] = None
+
+
+# ============================================================
 # BINDINGS
 # ============================================================
 
 def bind_canvas_events():
     """Attach rendering-related event bindings to the canvas."""
     canvas = get_canvas()
-    canvas.bind("<Button-1>", doit(place_selected_component))
+    canvas.bind("<Button-1>", doit(on_canvas_button_press))
+    canvas.bind("<B1-Motion>", doit(on_canvas_motion))
+    canvas.bind("<ButtonRelease-1>", doit(on_canvas_button_release))
+    canvas.bind("<Configure>", lambda e: sync_all())

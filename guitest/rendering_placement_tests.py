@@ -47,7 +47,7 @@ class _FakeEvent:
 def step_select_and_click():
     tree = gui_scaffold.widgets["component-tree"]
     tree.selection_set("1")
-    rendering.dispatch_event(_FakeEvent(100, 100), rendering.place_selected_component)
+    rendering.dispatch_event(_FakeEvent(100, 100), rendering.on_canvas_button_press)
     return ("next", None)
 
 
