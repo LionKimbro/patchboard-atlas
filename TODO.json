@@ -43,8 +43,7 @@
       "area": "rendering visual",
       "title": "Sophisticated canvas presentation with channels",
       "description": "After architectural cleanup is solid, develop a richer visual presentation on the Canvas that includes in-channels and out-channels for each component. Develop collaboratively with Wing-Cat via the ChatGPT conversation linked in the rendering spec documents.",
-      "status": "blocked",
-      "blocked_by": [1, 2, 3, 4, 5]
+      "status": "completed"
     }
   ]
 }

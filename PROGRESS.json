@@ -20,6 +20,30 @@
         "runtime.testing enables GUI tests and exits after completion."
       ]
     },
+    "2026-03-05": {
+      "summary": "Implemented rich channel rendering on the canvas. Components now display in/out channel ports and labels with dynamic sizing.",
+      "modules-modified": [
+        "src/patchboard_atlas/rendering.py — added component_half_h, component_half_w, rule_header_line, rule_channels; oval/line/anchor support in flush layer; replaced fixed COMPONENT_W/H with dynamic geometry"
+      ],
+      "architectural-decisions": [
+        "Component width is dynamic: driven by longest channel name × CHAR_W_PX (6px), floored at COMPONENT_MIN_HALF_W=60",
+        "Component height is dynamic: HEADER_H + n×CHANNEL_ROW_H + FOOTER_PAD where n = max(len(in), len(out))",
+        "Port ovals sit on box edges (left for in-channels, right for out-channels), styled #4A90E2",
+        "In-channel labels anchor 'w' from port inner edge; out-channel labels anchor 'e' from port inner edge",
+        "Header separator line separates title area from channel rows",
+        "All new element types (oval, line) follow the same RENDER dict → flush_to_canvas reconciliation pattern"
+      ],
+      "visual-constants": {
+        "HEADER_H": 26,
+        "CHANNEL_ROW_H": 18,
+        "FOOTER_PAD": 8,
+        "PORT_R": 5,
+        "CHAR_W_PX": 6,
+        "COL_INNER_HALF_GAP": 6,
+        "COMPONENT_MIN_HALF_W": 60,
+        "PORT_FILL": "#4A90E2"
+      }
+    },
     "2026-02-12": {
       "summary": "Implemented Component ID Card ingestion, ECS identity layer, and tree projection.",
       "modules-created": [
