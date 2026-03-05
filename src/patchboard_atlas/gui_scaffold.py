@@ -131,6 +131,8 @@ def create_gui(root):
                           command=cmd_import_component_id_card_file)
     file_menu.add_command(label="Import Card Folder...", underline=12,
                           command=cmd_import_component_id_card_folder)
+    file_menu.add_command(label="Scan Outbox for Card...", underline=0,
+                          command=cmd_scan_outbox_for_card)
     file_menu.add_separator()
     file_menu.add_command(label="Exit", underline=1, command=cmd_exit)
     widgets["file-menu"] = file_menu
@@ -332,6 +334,60 @@ def cmd_import_component_id_card_folder():
     tp.rebuild_tree()
     if fail_count == 0:
         set_status(f"Imported {ok_count} card(s).", GREEN)
+    else:
+        set_status(f"Imported {ok_count}, failed {fail_count}.", RED)
+
+
+def cmd_scan_outbox_for_card():
+    """File > Scan Outbox for Card... menu command.
+
+    Asks for a directory (an outbox), scans all *.json files for messages
+    with channel 'component-id-card', and ingests the signal of each as a
+    Component ID Card.
+    """
+    import json
+    from pathlib import Path
+    from patchboard_atlas import mem
+    from patchboard_atlas import ecs_world as ecs
+    from patchboard_atlas import component_registry as reg
+    from patchboard_atlas import tree_projection as tp
+
+    dirpath = filedialog.askdirectory(title="Scan Outbox for Component ID Card")
+    if not dirpath:
+        return
+
+    ok_count = 0
+    fail_count = 0
+    for path in sorted(Path(dirpath).glob("*.json")):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, IOError):
+            continue
+        try:
+            msg = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(msg, dict) or msg.get("channel") != "component-id-card":
+            continue
+        signal = msg.get("signal")
+        if not isinstance(signal, dict):
+            continue
+        mem.push(signal)
+        ok, _ = reg.ingest_card()
+        if ok:
+            reg.persist_card()
+            eid = ecs.allocate_entity()
+            ecs.cmp_card_ref[eid] = mem.pop()
+            ok_count += 1
+        else:
+            mem.drop()
+            fail_count += 1
+
+    tp.rebuild_tree()
+    if ok_count == 0 and fail_count == 0:
+        set_status("No component-id-card messages found in outbox.", RED)
+    elif fail_count == 0:
+        set_status(f"Imported {ok_count} card(s) from outbox.", GREEN)
     else:
         set_status(f"Imported {ok_count}, failed {fail_count}.", RED)
 
