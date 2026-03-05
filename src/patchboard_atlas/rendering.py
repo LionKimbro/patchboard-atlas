@@ -18,12 +18,21 @@ from patchboard_atlas import eid_projection
 # CONSTANTS
 # ============================================================
 
-COMPONENT_W = 120
-COMPONENT_H = 60
+COMPONENT_MIN_HALF_W = 60
+HEADER_H = 26
+CHANNEL_ROW_H = 18
+FOOTER_PAD = 8
+PORT_R = 5
+CHAR_W_PX = 6       # estimated px per character at Consolas 8pt
+COL_INNER_HALF_GAP = 6  # min px from label edge to box center
 
 PERIMETER_OUTLINE = "#4488cc"
 PERIMETER_FILL = "#223344"
+HEADER_LINE_FILL = "#4488cc"
 TITLE_FILL = "#ccddee"
+CHANNEL_LABEL_FILL = "#aabbcc"
+PORT_FILL = "#4A90E2"
+PORT_OUTLINE = "#cccccc"
 
 
 # ============================================================
@@ -97,6 +106,26 @@ def lookup_codes(thing_codes):
 
 
 # ============================================================
+# COMPONENT GEOMETRY
+# ============================================================
+
+def component_half_h(card):
+    """Return half the component height, scaled by channel count."""
+    channels = card.get("channels", {}) if card else {}
+    n = max(len(channels.get("in", [])), len(channels.get("out", [])), 0)
+    return (HEADER_H + n * CHANNEL_ROW_H + FOOTER_PAD) // 2
+
+
+def component_half_w(card):
+    """Return half the component width, scaled by longest channel name."""
+    channels = card.get("channels", {}) if card else {}
+    all_names = channels.get("in", []) + channels.get("out", [])
+    max_len = max((len(n) for n in all_names), default=0)
+    needed = PORT_R + 4 + max_len * CHAR_W_PX + COL_INNER_HALF_GAP
+    return max(needed, COMPONENT_MIN_HALF_W)
+
+
+# ============================================================
 # RULES
 # ============================================================
 
@@ -105,8 +134,9 @@ def rule_perimeter():
     if mem.peek("card") is None:
         return
     eid, sx, sy = lookup_codes("#xy")
-    half_w = COMPONENT_W // 2
-    half_h = COMPONENT_H // 2
+    card = mem.peek("card")
+    half_w = component_half_w(card)
+    half_h = component_half_h(card)
     ek = ("entity", eid, "perimeter")
     RENDER[ek] = {
         "type": "rectangle",
@@ -121,24 +151,120 @@ def rule_perimeter():
     }
 
 
+def rule_header_line():
+    """Emit a horizontal separator between the title area and channel rows."""
+    if mem.peek("card") is None:
+        return
+    eid, sx, sy = lookup_codes("#xy")
+    card = mem.peek("card")
+    half_w = component_half_w(card)
+    half_h = component_half_h(card)
+    line_y = sy - half_h + HEADER_H
+    ek = ("entity", eid, "header-line")
+    RENDER[ek] = {
+        "type": "line",
+        "x0": sx - half_w,
+        "y0": line_y,
+        "x1": sx + half_w,
+        "y1": line_y,
+        "fill": HEADER_LINE_FILL,
+        "width": 1,
+        "tags": (ek_to_tag(ek), entity_tag(eid), "kind|component"),
+    }
+
+
 def rule_title():
-    """Emit a title label for a placed entity."""
+    """Emit a title label centered in the header area."""
     if mem.peek("card") is None:
         return
     eid, sx, sy, title = lookup_codes("#xyt")
+    card = mem.peek("card")
+    half_h = component_half_h(card)
+    title_y = sy - half_h + HEADER_H // 2
     ek = ("entity", eid, "title")
     RENDER[ek] = {
         "type": "text",
         "x": sx,
-        "y": sy,
+        "y": title_y,
         "text": title,
+        "anchor": "center",
         "fill": TITLE_FILL,
         "font": ("Consolas", 10),
         "tags": (ek_to_tag(ek), entity_tag(eid), "kind|component"),
     }
 
 
-RULES = [rule_perimeter, rule_title]
+def rule_channels():
+    """Emit port ovals and labels for all in/out channels of a placed entity."""
+    if mem.peek("card") is None:
+        return
+    eid, sx, sy = lookup_codes("#xy")
+    card = mem.peek("card")
+    channels = card.get("channels", {})
+    in_channels = channels.get("in", [])
+    out_channels = channels.get("out", [])
+    half_w = component_half_w(card)
+    half_h = component_half_h(card)
+    top_y = sy - half_h + HEADER_H
+
+    for i, ch_name in enumerate(in_channels):
+        row_y = top_y + i * CHANNEL_ROW_H + CHANNEL_ROW_H // 2
+        port_x = sx - half_w
+
+        ek_port = ("entity", eid, "channel-in", ch_name, "port")
+        RENDER[ek_port] = {
+            "type": "oval",
+            "x0": port_x - PORT_R,
+            "y0": row_y - PORT_R,
+            "x1": port_x + PORT_R,
+            "y1": row_y + PORT_R,
+            "fill": PORT_FILL,
+            "outline": PORT_OUTLINE,
+            "tags": (ek_to_tag(ek_port), entity_tag(eid), "kind|component"),
+        }
+
+        ek_label = ("entity", eid, "channel-in", ch_name, "label")
+        RENDER[ek_label] = {
+            "type": "text",
+            "x": port_x + PORT_R + 4,
+            "y": row_y,
+            "text": ch_name,
+            "anchor": "w",
+            "fill": CHANNEL_LABEL_FILL,
+            "font": ("Consolas", 8),
+            "tags": (ek_to_tag(ek_label), entity_tag(eid), "kind|component"),
+        }
+
+    for i, ch_name in enumerate(out_channels):
+        row_y = top_y + i * CHANNEL_ROW_H + CHANNEL_ROW_H // 2
+        port_x = sx + half_w
+
+        ek_port = ("entity", eid, "channel-out", ch_name, "port")
+        RENDER[ek_port] = {
+            "type": "oval",
+            "x0": port_x - PORT_R,
+            "y0": row_y - PORT_R,
+            "x1": port_x + PORT_R,
+            "y1": row_y + PORT_R,
+            "fill": PORT_FILL,
+            "outline": PORT_OUTLINE,
+            "tags": (ek_to_tag(ek_port), entity_tag(eid), "kind|component"),
+        }
+
+        ek_label = ("entity", eid, "channel-out", ch_name, "label")
+        RENDER[ek_label] = {
+            "type": "text",
+            "x": port_x - PORT_R - 4,
+            "y": row_y,
+            "text": ch_name,
+            "anchor": "e",
+            "fill": CHANNEL_LABEL_FILL,
+            "font": ("Consolas", 8),
+            "tags": (ek_to_tag(ek_label), entity_tag(eid), "kind|component"),
+        }
+
+
+RULES = [rule_perimeter, rule_header_line, rule_title, rule_channels]
 
 
 # ============================================================
@@ -176,6 +302,10 @@ def _create_element(desc):
     canvas = get_canvas()
     if desc["type"] == "rectangle":
         item_id = canvas.create_rectangle(0, 0, 0, 0, tags=desc["tags"])
+    elif desc["type"] == "oval":
+        item_id = canvas.create_oval(0, 0, 0, 0, tags=desc["tags"])
+    elif desc["type"] == "line":
+        item_id = canvas.create_line(0, 0, 0, 0, tags=desc["tags"])
     elif desc["type"] == "text":
         item_id = canvas.create_text(0, 0, text="", tags=desc["tags"])
     else:
@@ -186,7 +316,7 @@ def _create_element(desc):
 def _update_element(item_id, desc):
     """Shape and style an existing canvas item from a descriptor."""
     canvas = get_canvas()
-    if desc["type"] == "rectangle":
+    if desc["type"] in ("rectangle", "oval"):
         cm.g_coord["x0"] = desc["x0"]
         cm.g_coord["y0"] = desc["y0"]
         cm.g_coord["x1"] = desc["x1"]
@@ -196,10 +326,27 @@ def _update_element(item_id, desc):
         x0, y0, x1, y1 = cm.get_xyxy()
 
         canvas.coords(item_id, x0, y0, x1, y1)
-        canvas.itemconfigure(item_id,
-                             outline=desc["outline"],
-                             fill=desc["fill"],
-                             width=desc["width"])
+        if desc["type"] == "rectangle":
+            canvas.itemconfigure(item_id,
+                                 outline=desc["outline"],
+                                 fill=desc["fill"],
+                                 width=desc["width"])
+        else:
+            canvas.itemconfigure(item_id,
+                                 outline=desc["outline"],
+                                 fill=desc["fill"])
+
+    elif desc["type"] == "line":
+        cm.g_coord["x0"] = desc["x0"]
+        cm.g_coord["y0"] = desc["y0"]
+        cm.g_coord["x1"] = desc["x1"]
+        cm.g_coord["y1"] = desc["y1"]
+        cm.g_coord["coord-type"] = "w"
+        cm.project_to("c")
+        x0, y0, x1, y1 = cm.get_xyxy()
+
+        canvas.coords(item_id, x0, y0, x1, y1)
+        canvas.itemconfigure(item_id, fill=desc["fill"], width=desc["width"])
 
     elif desc["type"] == "text":
         cm.set_xy(desc["x"], desc["y"])
@@ -211,7 +358,8 @@ def _update_element(item_id, desc):
         canvas.itemconfigure(item_id,
                              text=desc["text"],
                              fill=desc["fill"],
-                             font=desc["font"])
+                             font=desc["font"],
+                             anchor=desc.get("anchor", "center"))
 
 
 def flush_to_canvas():
