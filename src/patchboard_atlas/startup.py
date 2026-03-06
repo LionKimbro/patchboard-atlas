@@ -9,6 +9,7 @@ from patchboard_atlas import paths
 from patchboard_atlas import component_registry as reg
 from patchboard_atlas import tree_projection as tp
 from patchboard_atlas import rendering
+from patchboard_atlas import gui_tick
 
 
 def startup_load():
@@ -19,3 +20,4 @@ def startup_load():
     tp.rebuild_tree()
     rendering.bind_canvas_events()
     rendering.sync_all()
+    gui_tick.start()

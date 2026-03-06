@@ -235,6 +235,9 @@ def destroy_gui():
     """
     Destroy all windows and clear widget references.
     """
+    from patchboard_atlas import gui_tick
+    gui_tick.stop()
+
     console_window = widgets.get("console-window")
     if console_window is not None and console_window.winfo_exists():
         console_window.destroy()
