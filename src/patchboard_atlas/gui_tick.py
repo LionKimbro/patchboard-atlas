@@ -12,14 +12,19 @@ TICK_MS = 100  # 10 Hz
 
 g = {
     "after_id": None,
+    "tick_count": 0,
 }
 
 
 def _call_per_tick():
-    pass
+    from patchboard_atlas import router_poll
+    from patchboard_atlas import intent_wires as iw
+    router_poll.on_tick(g["tick_count"])
+    iw.on_tick(g["tick_count"])
 
 
 def _tick():
+    g["tick_count"] += 1
     _call_per_tick()
     root = gui_scaffold.widgets.get("root")
     if root is None:

@@ -85,6 +85,7 @@ def main():
 
     app.declare_key("path.router.inbox", None)
     app.declare_key("path.router.outbox", None)
+    app.declare_key("path.router.routes", None)
     app.declare_key("runtime.testing", False)
 
     app.declare_cmd("", run)
